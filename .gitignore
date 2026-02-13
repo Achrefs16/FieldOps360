@@ -1,0 +1,27 @@
+# Local project docs (not for repo)
+PROJECT_OVERVIEW.md
+pdf_content.txt
+*.pdf
+*.docx
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+vendor/
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
