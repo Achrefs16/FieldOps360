@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: fieldops-prod
-  labels:
-    app.kubernetes.io/part-of: fieldops360
-    environment: prod

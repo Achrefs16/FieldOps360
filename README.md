@@ -59,25 +59,22 @@ FieldOps/
 
 ### 1. Cloner et configurer
 ```bash
-git clone https://github.com/Achrefs16/FieldOps360.git
+git clone -b develop https://github.com/Achrefs16/FieldOps360.git
 cd FieldOps360
 cp infra/terraform/dev.tfvars.example infra/terraform/dev.tfvars
-# Editer dev.tfvars avec vos mots de passe
+nano infra/terraform/dev.tfvars
+# → Remplir les mots de passe
 ```
 
-### 2. Creer les namespaces
-```bash
-kubectl apply -f infra/k8s/namespaces/
-```
-
-### 3. Deployer l'infrastructure
+### 2. Deployer tout (namespace + services)
 ```bash
 cd infra/terraform
+sudo chmod 644 /etc/rancher/k3s/k3s.yaml
 terraform init
 terraform apply -var-file=dev.tfvars
 ```
 
-### 4. Verifier
+### 3. Verifier
 ```bash
 kubectl get pods -n fieldops-dev
 ```

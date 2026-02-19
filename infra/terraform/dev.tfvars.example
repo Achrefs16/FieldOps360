@@ -2,7 +2,6 @@
 # cp dev.tfvars.example dev.tfvars
 
 environment        = "dev"
-domain             = "dev.fieldops360.local"
 db_password        = "CHANGE_ME"
 redis_password     = "CHANGE_ME"
 rabbitmq_password  = "CHANGE_ME"
