@@ -120,6 +120,8 @@ resource "helm_release" "rabbitmq" {
   wait       = true
 
   values = [<<-YAML
+    image:
+      tag: latest
     replicaCount: 1
     auth:
       username: fieldops
@@ -153,6 +155,8 @@ resource "helm_release" "minio" {
   wait       = true
 
   values = [<<-YAML
+    image:
+      tag: latest
     mode: standalone
     auth:
       rootUser: "${var.minio_access_key}"
