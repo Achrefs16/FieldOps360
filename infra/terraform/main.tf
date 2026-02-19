@@ -48,7 +48,7 @@ resource "kubernetes_namespace" "fieldops" {
 resource "helm_release" "postgresql" {
   name       = "postgresql"
   namespace  = kubernetes_namespace.fieldops.metadata[0].name
-  repository = "https://charts.bitnami.com/bitnami"
+  repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "postgresql"
   # No version pin — uses latest chart with current images
   timeout    = 600
@@ -81,7 +81,7 @@ resource "helm_release" "redis" {
 
   name       = "redis"
   namespace  = kubernetes_namespace.fieldops.metadata[0].name
-  repository = "https://charts.bitnami.com/bitnami"
+  repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "redis"
   # No version pin — uses latest chart with current images
   timeout    = 600
@@ -113,7 +113,7 @@ resource "helm_release" "rabbitmq" {
 
   name       = "rabbitmq"
   namespace  = kubernetes_namespace.fieldops.metadata[0].name
-  repository = "https://charts.bitnami.com/bitnami"
+  repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "rabbitmq"
   # No version pin — uses latest chart with current images
   timeout    = 600
@@ -146,7 +146,7 @@ resource "helm_release" "minio" {
 
   name       = "minio"
   namespace  = kubernetes_namespace.fieldops.metadata[0].name
-  repository = "https://charts.bitnami.com/bitnami"
+  repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "minio"
   # No version pin — uses latest chart with current images
   timeout    = 600
