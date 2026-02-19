@@ -1,8 +1,5 @@
-# Local project docs (not for repo)
-PROJECT_OVERVIEW.md
-pdf_content.txt
-*.pdf
-*.docx
+# Local docs (not for repo)
+docs/
 
 # Dependencies
 node_modules/
@@ -25,3 +22,14 @@ Thumbs.db
 # Build
 dist/
 build/
+
+# Terraform - NEVER commit state or secrets
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+
+# Logs
+*.log

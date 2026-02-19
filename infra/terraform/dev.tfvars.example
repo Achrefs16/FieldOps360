@@ -1,0 +1,12 @@
+# EXAMPLE - Copy to dev.tfvars and fill in real values
+# cp dev.tfvars.example dev.tfvars
+
+environment        = "dev"
+domain             = "dev.fieldops360.local"
+db_password        = "CHANGE_ME"
+redis_password     = "CHANGE_ME"
+rabbitmq_password  = "CHANGE_ME"
+minio_access_key   = "CHANGE_ME"
+minio_secret_key   = "CHANGE_ME"
+db_storage_size    = "1Gi"
+minio_storage_size = "2Gi"
