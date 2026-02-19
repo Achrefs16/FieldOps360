@@ -21,6 +21,7 @@
 | Stockage fichiers | MinIO (S3-compatible) |
 | Orchestration | K3s (Kubernetes) |
 | Ingress | Traefik (pre-installe avec K3s) |
+| IaC | Terraform |
 | CI/CD | GitHub Actions |
 | Registry | Docker Hub |
 
@@ -29,23 +30,35 @@
 ## Structure du Projet
 
 ```
-FieldOps/
+FieldOps360/
 ├── .github/workflows/
-│   ├── ci.yml                    # CI: build, scan, push Docker Hub
+│   ├── ci.yml                    # CI: detect changes, build, push Docker Hub
 │   └── cd.yml                    # CD: deploy to K3s via self-hosted runner
 ├── infra/
 │   ├── k8s/
-│   │   ├── namespaces/           # dev, staging, prod, monitoring
-│   │   └── network-policies/     # Isolation reseau
+│   │   └── network-policies/     # Zero trust (4 regles reseau)
 │   └── terraform/
-│       ├── main.tf               # PostgreSQL, Redis, RabbitMQ, MinIO (Helm)
-│       ├── variables.tf          # Variables
+│       ├── main.tf               # PostgreSQL, Redis, RabbitMQ, MinIO
+│       ├── variables.tf          # 8 variables (5 sensibles)
 │       ├── dev.tfvars            # Valeurs dev (gitignored)
 │       └── dev.tfvars.example    # Template (safe to commit)
+├── planification/
+│   ├── DOCUMENTATION_TECHNIQUE.md  # Documentation complete
+│   └── INFRASTRUCTURE_PLAN.md      # Plan phases avancees
 ├── services/                     # Microservices (a venir)
-├── frontend/                     # Web + Mobile (a venir)
-└── README.md
+└── frontend/                     # Web + Mobile (a venir)
 ```
+
+---
+
+## Infrastructure Deployee (K3s)
+
+| Service | Image | Port | Statut |
+|---|---|---|---|
+| PostgreSQL | Bitnami (Helm OCI) | 5432 | ✅ Running |
+| Redis | Bitnami (Helm OCI) | 6379 | ✅ Running |
+| RabbitMQ | `rabbitmq:3-management` | 5672 / 15672 | ✅ Running |
+| MinIO | `minio/minio:latest` | 9000 / 9001 | ✅ Running |
 
 ---
 
@@ -53,9 +66,9 @@ FieldOps/
 
 ### Prerequis
 - Ubuntu Server 22.04 (VM 8GB RAM)
-- K3s installe
-- kubectl + Terraform sur Windows
-- Docker Hub account
+- K3s installe (`curl -sfL https://get.k3s.io | sh -`)
+- Helm CLI
+- Terraform
 
 ### 1. Cloner et configurer
 ```bash
@@ -76,7 +89,7 @@ terraform apply -var-file=dev.tfvars
 
 ### 3. Verifier
 ```bash
-kubectl get pods -n fieldops-dev
+sudo kubectl get pods -n fieldops-dev
 ```
 
 ---
@@ -87,19 +100,20 @@ kubectl get pods -n fieldops-dev
 git push → GitHub Actions CI → Build Docker → Push Docker Hub → CD → Deploy K3s
 ```
 
-| Branch | Cible |
-|---|---|
-| `develop` | fieldops-dev |
-| `main` | fieldops-prod (approbation manuelle) |
+| Branche | Cible | Approbation |
+|---|---|---|
+| `develop` | fieldops-dev | Automatique |
+| `main` | fieldops-prod | Manuelle |
 
-### Secrets GitHub requis
-| Secret | Description |
-|---|---|
-| `DOCKERHUB_USERNAME` | Docker Hub username |
-| `DOCKERHUB_TOKEN` | Docker Hub access token |
+### Fonctionnalites CI
+- Detection des changements (`dorny/paths-filter`) — seuls les services modifies sont rebuilds
+- Build + Push Docker Hub avec 2 tags: `{sha}` + `latest`
+- Validation Terraform (`fmt`, `init`, `validate`) si infra modifiee
 
-### Self-hosted Runner
-Le CD utilise un runner auto-heberge sur la VM K3s pour executer `kubectl`.
+### Fonctionnalites CD
+- Self-hosted runner sur la VM K3s
+- Rolling update via `kubectl set image`
+- Rollout status avec timeout
 
 ---
 

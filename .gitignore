@@ -1,6 +1,6 @@
 # Local docs (not for repo)
 docs/
-
+planification/
 # Dependencies
 node_modules/
 __pycache__/
