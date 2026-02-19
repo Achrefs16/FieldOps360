@@ -43,14 +43,16 @@ resource "kubernetes_namespace" "fieldops" {
 }
 
 # ============================================================
-# POSTGRESQL (needs more memory than LimitRange default)
+# POSTGRESQL — deploys first
 # ============================================================
 resource "helm_release" "postgresql" {
   name       = "postgresql"
   namespace  = kubernetes_namespace.fieldops.metadata[0].name
   repository = "https://charts.bitnami.com/bitnami"
   chart      = "postgresql"
-  version    = "14.3.3"
+  # No version pin — uses latest chart with current images
+  timeout    = 600
+  wait       = true
 
   values = [<<-YAML
     architecture: standalone
@@ -63,6 +65,7 @@ resource "helm_release" "postgresql" {
         size: ${var.db_storage_size}
       resources:
         requests:
+          cpu: 50m
           memory: 128Mi
         limits:
           memory: 512Mi
@@ -71,14 +74,18 @@ resource "helm_release" "postgresql" {
 }
 
 # ============================================================
-# REDIS (LimitRange handles resources)
+# REDIS — waits for PostgreSQL
 # ============================================================
 resource "helm_release" "redis" {
+  depends_on = [helm_release.postgresql]
+
   name       = "redis"
   namespace  = kubernetes_namespace.fieldops.metadata[0].name
   repository = "https://charts.bitnami.com/bitnami"
   chart      = "redis"
-  version    = "18.16.0"
+  # No version pin — uses latest chart with current images
+  timeout    = 600
+  wait       = true
 
   values = [<<-YAML
     architecture: standalone
@@ -88,19 +95,29 @@ resource "helm_release" "redis" {
       persistence:
         storageClass: local-path
         size: 1Gi
+      resources:
+        requests:
+          cpu: 25m
+          memory: 64Mi
+        limits:
+          memory: 256Mi
   YAML
   ]
 }
 
 # ============================================================
-# RABBITMQ (LimitRange handles resources)
+# RABBITMQ — waits for Redis
 # ============================================================
 resource "helm_release" "rabbitmq" {
+  depends_on = [helm_release.redis]
+
   name       = "rabbitmq"
   namespace  = kubernetes_namespace.fieldops.metadata[0].name
   repository = "https://charts.bitnami.com/bitnami"
   chart      = "rabbitmq"
-  version    = "13.0.3"
+  # No version pin — uses latest chart with current images
+  timeout    = 600
+  wait       = true
 
   values = [<<-YAML
     replicaCount: 1
@@ -110,20 +127,30 @@ resource "helm_release" "rabbitmq" {
     persistence:
       storageClass: local-path
       size: 1Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
     plugins: "rabbitmq_management rabbitmq_prometheus"
   YAML
   ]
 }
 
 # ============================================================
-# MINIO (LimitRange handles resources)
+# MINIO — waits for RabbitMQ
 # ============================================================
 resource "helm_release" "minio" {
+  depends_on = [helm_release.rabbitmq]
+
   name       = "minio"
   namespace  = kubernetes_namespace.fieldops.metadata[0].name
   repository = "https://charts.bitnami.com/bitnami"
   chart      = "minio"
-  version    = "13.7.0"
+  # No version pin — uses latest chart with current images
+  timeout    = 600
+  wait       = true
 
   values = [<<-YAML
     mode: standalone
@@ -133,6 +160,12 @@ resource "helm_release" "minio" {
     persistence:
       storageClass: local-path
       size: ${var.minio_storage_size}
+    resources:
+      requests:
+        cpu: 25m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
     defaultBuckets: "fieldops-documents,fieldops-photos,fieldops-signatures,fieldops-avatars,fieldops-reports"
   YAML
   ]
