@@ -106,73 +106,164 @@ resource "helm_release" "redis" {
 }
 
 # ============================================================
-# RABBITMQ — waits for Redis
+# RABBITMQ — official image (Bitnami deprecated)
 # ============================================================
-resource "helm_release" "rabbitmq" {
+resource "kubernetes_persistent_volume_claim" "rabbitmq" {
+  metadata {
+    name      = "rabbitmq-data"
+    namespace = kubernetes_namespace.fieldops.metadata[0].name
+  }
+  spec {
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = "local-path"
+    resources {
+      requests = { storage = "1Gi" }
+    }
+  }
+}
+
+resource "kubernetes_deployment" "rabbitmq" {
   depends_on = [helm_release.redis]
 
-  name       = "rabbitmq"
-  namespace  = kubernetes_namespace.fieldops.metadata[0].name
-  repository = "oci://registry-1.docker.io/bitnamicharts"
-  chart      = "rabbitmq"
-  # No version pin — uses latest chart with current images
-  timeout    = 600
-  wait       = true
+  metadata {
+    name      = "rabbitmq"
+    namespace = kubernetes_namespace.fieldops.metadata[0].name
+    labels    = { app = "rabbitmq" }
+  }
+  spec {
+    replicas = 1
+    selector { match_labels = { app = "rabbitmq" } }
+    template {
+      metadata { labels = { app = "rabbitmq" } }
+      spec {
+        container {
+          name  = "rabbitmq"
+          image = "rabbitmq:3-management"
+          port { container_port = 5672 }
+          port { container_port = 15672 }
+          env {
+            name  = "RABBITMQ_DEFAULT_USER"
+            value = "fieldops"
+          }
+          env {
+            name  = "RABBITMQ_DEFAULT_PASS"
+            value = var.rabbitmq_password
+          }
+          resources {
+            requests = { cpu = "50m", memory = "128Mi" }
+            limits   = { memory = "512Mi" }
+          }
+          volume_mount {
+            name       = "data"
+            mount_path = "/var/lib/rabbitmq"
+          }
+        }
+        volume {
+          name = "data"
+          persistent_volume_claim { claim_name = "rabbitmq-data" }
+        }
+      }
+    }
+  }
+}
 
-  values = [<<-YAML
-    image:
-      tag: latest
-    replicaCount: 1
-    auth:
-      username: fieldops
-      password: "${var.rabbitmq_password}"
-    persistence:
-      storageClass: local-path
-      size: 1Gi
-    resources:
-      requests:
-        cpu: 50m
-        memory: 128Mi
-      limits:
-        memory: 512Mi
-    plugins: "rabbitmq_management rabbitmq_prometheus"
-  YAML
-  ]
+resource "kubernetes_service" "rabbitmq" {
+  metadata {
+    name      = "rabbitmq"
+    namespace = kubernetes_namespace.fieldops.metadata[0].name
+  }
+  spec {
+    selector = { app = "rabbitmq" }
+    port {
+      name = "amqp"
+      port = 5672
+    }
+    port {
+      name = "management"
+      port = 15672
+    }
+  }
 }
 
 # ============================================================
-# MINIO — waits for RabbitMQ
+# MINIO — official image (Bitnami deprecated)
 # ============================================================
-resource "helm_release" "minio" {
-  depends_on = [helm_release.rabbitmq]
+resource "kubernetes_persistent_volume_claim" "minio" {
+  metadata {
+    name      = "minio-data"
+    namespace = kubernetes_namespace.fieldops.metadata[0].name
+  }
+  spec {
+    access_modes       = ["ReadWriteOnce"]
+    storage_class_name = "local-path"
+    resources {
+      requests = { storage = var.minio_storage_size }
+    }
+  }
+}
 
-  name       = "minio"
-  namespace  = kubernetes_namespace.fieldops.metadata[0].name
-  repository = "oci://registry-1.docker.io/bitnamicharts"
-  chart      = "minio"
-  # No version pin — uses latest chart with current images
-  timeout    = 600
-  wait       = true
+resource "kubernetes_deployment" "minio" {
+  depends_on = [kubernetes_deployment.rabbitmq]
 
-  values = [<<-YAML
-    image:
-      tag: latest
-    mode: standalone
-    auth:
-      rootUser: "${var.minio_access_key}"
-      rootPassword: "${var.minio_secret_key}"
-    persistence:
-      storageClass: local-path
-      size: ${var.minio_storage_size}
-    resources:
-      requests:
-        cpu: 25m
-        memory: 128Mi
-      limits:
-        memory: 512Mi
-    defaultBuckets: "fieldops-documents,fieldops-photos,fieldops-signatures,fieldops-avatars,fieldops-reports"
-  YAML
-  ]
+  metadata {
+    name      = "minio"
+    namespace = kubernetes_namespace.fieldops.metadata[0].name
+    labels    = { app = "minio" }
+  }
+  spec {
+    replicas = 1
+    selector { match_labels = { app = "minio" } }
+    template {
+      metadata { labels = { app = "minio" } }
+      spec {
+        container {
+          name  = "minio"
+          image = "minio/minio:latest"
+          args  = ["server", "/data", "--console-address", ":9001"]
+          port { container_port = 9000 }
+          port { container_port = 9001 }
+          env {
+            name  = "MINIO_ROOT_USER"
+            value = var.minio_access_key
+          }
+          env {
+            name  = "MINIO_ROOT_PASSWORD"
+            value = var.minio_secret_key
+          }
+          resources {
+            requests = { cpu = "25m", memory = "128Mi" }
+            limits   = { memory = "512Mi" }
+          }
+          volume_mount {
+            name       = "data"
+            mount_path = "/data"
+          }
+        }
+        volume {
+          name = "data"
+          persistent_volume_claim { claim_name = "minio-data" }
+        }
+      }
+    }
+  }
+}
+
+resource "kubernetes_service" "minio" {
+  metadata {
+    name      = "minio"
+    namespace = kubernetes_namespace.fieldops.metadata[0].name
+  }
+  spec {
+    selector = { app = "minio" }
+    port {
+      name = "api"
+      port = 9000
+    }
+    port {
+      name = "console"
+      port = 9001
+    }
+  }
 }
 
 # ============================================================
@@ -197,3 +288,4 @@ output "rabbitmq_host" {
 output "minio_host" {
   value = "minio.${kubernetes_namespace.fieldops.metadata[0].name}.svc.cluster.local"
 }
+
