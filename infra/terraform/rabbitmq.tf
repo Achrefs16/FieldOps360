@@ -32,7 +32,7 @@ resource "kubernetes_deployment" "rabbitmq" {
           port { container_port = 5672 }
           port { container_port = 15672 }
           env {
-            name = "RABBITMQ_DEFAULT_USER"
+            name  = "RABBITMQ_DEFAULT_USER"
             value = "fieldops"
           }
           env {
