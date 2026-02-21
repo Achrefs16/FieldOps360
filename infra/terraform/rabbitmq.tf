@@ -13,10 +13,7 @@ resource "kubernetes_persistent_volume_claim" "rabbitmq" {
 }
 
 resource "kubernetes_deployment" "rabbitmq" {
-  depends_on = [
-    helm_release.redis,
-    kubernetes_secret.fieldops_secrets
-  ]
+  depends_on = [helm_release.redis, kubernetes_secret.fieldops_secrets]
 
   metadata {
     name      = "rabbitmq"
