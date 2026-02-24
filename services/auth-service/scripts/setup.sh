@@ -81,7 +81,12 @@ echo ""
 
 # ── Step 4: Apply K8s Deployment + Service + IngressRoute ───────
 echo "[4/6] Applying K8s manifests..."
-kubectl apply -f "$INFRA_DIR/k8s/secrets/smtp-credentials.yaml"
+if [ -f "$INFRA_DIR/k8s/secrets/smtp-credentials.yaml" ]; then
+  kubectl apply -f "$INFRA_DIR/k8s/secrets/smtp-credentials.yaml"
+else
+  echo "  Creating smtp-credentials secret dynamically..."
+  kubectl create secret generic smtp-credentials --from-literal=smtp-user="" --from-literal=smtp-pass="" -n $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+fi
 kubectl apply -f "$INFRA_DIR/k8s/configmaps/auth-service.yaml"
 kubectl apply -f "$INFRA_DIR/k8s/services/auth-service.yaml"
 kubectl apply -f "$INFRA_DIR/k8s/deployments/auth-service.yaml"
