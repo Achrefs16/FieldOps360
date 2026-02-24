@@ -1,0 +1,28 @@
+# Auth Service - ConfigMap
+# Non-secret configuration values. Keeps the Deployment manifest clean.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: fieldops-dev
+  labels:
+    app: auth-service
+    app.kubernetes.io/part-of: fieldops360
+data:
+  NODE_ENV: "production"
+  PORT: "3001"
+  DB_HOST: "postgresql.fieldops-dev.svc.cluster.local"
+  DB_PORT: "5432"
+  DB_USER: "postgres"
+  REDIS_HOST: "redis-master.fieldops-dev.svc.cluster.local"
+  REDIS_PORT: "6379"
+  MINIO_ENDPOINT: "minio.fieldops-dev.svc.cluster.local"
+  MINIO_PORT: "9000"
+  MINIO_BUCKET: "avatars"
+  MINIO_USE_SSL: "false"
+  JWT_ACCESS_EXPIRY: "900"
+  JWT_REFRESH_EXPIRY: "604800"
+  SMTP_HOST: "sandbox.smtp.mailtrap.io"
+  SMTP_PORT: "2525"
+  SMTP_FROM: "noreply@fieldops360.com"

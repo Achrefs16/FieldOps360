@@ -42,6 +42,37 @@ jobs:
               - 'infra/**'
 
   # ============================================================
+  # LINT & TYPE-CHECK (only changed services)
+  # ============================================================
+  lint-test:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.auth == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/auth-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/auth-service/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma clients
+        run: |
+          npx prisma generate --schema=prisma/platform/schema.prisma
+          npx prisma generate --schema=prisma/tenant/schema.prisma
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+  # ============================================================
   # BUILD & PUSH TO DOCKER HUB (only changed services)
   # ============================================================
   build-push:

@@ -1,0 +1,40 @@
+// Tenant Database Schema — one copy per tenant (fieldops_tenant_*)
+// Contains all operational data for a single company.
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../../../node_modules/.prisma/tenant-client"
+  envFilePath   = "../../../../.env"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("TENANT_DATABASE_URL")
+}
+
+model User {
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  passwordHash        String    @map("password_hash")
+  firstName           String    @map("first_name")
+  lastName            String    @map("last_name")
+  role                String    // MANAGER, PROJECT_MANAGER, SITE_LEADER, TEAM_MEMBER
+  phone               String?
+  position            String?
+  skills              String[]  @default([])
+  avatarUrl           String?   @map("avatar_url")
+  language            String    @default("fr")
+  timezone            String    @default("UTC")
+  active              Boolean   @default(true)
+  firstLogin          Boolean   @default(true) @map("first_login")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+  lastLoginAt         DateTime? @map("last_login_at")
+  refreshToken        String?   @map("refresh_token")
+  resetToken          String?   @map("reset_token")
+  resetTokenExpiry    DateTime? @map("reset_token_expiry")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@map("users")
+}

@@ -50,4 +50,4 @@ spec:
       kind: Rule
       services:
         - name: reporting-service
-          port: 3002
+          port: 3005

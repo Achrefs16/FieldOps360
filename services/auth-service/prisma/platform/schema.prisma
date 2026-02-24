@@ -1,0 +1,56 @@
+// Platform Database Schema — shared across all tenants
+// This schema manages the tenant registry, super admin accounts, and subscription plans.
+// The URL is a placeholder for Prisma generate; it is overridden at runtime.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/.prisma/platform-client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("PLATFORM_DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  subdomain String   @unique
+  dbName    String   @unique @map("db_name")
+  dbHost    String   @default("postgresql.fieldops-dev.svc.cluster.local") @map("db_host")
+  dbPort    Int      @default(5432) @map("db_port")
+  sector    String?
+  plan      String   @default("free")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("tenants")
+}
+
+model PlatformAdmin {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  role         String   @default("SUPER_ADMIN")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_admins")
+}
+
+model SubscriptionPlan {
+  id            String   @id @default(uuid())
+  name          String   @unique
+  maxUsers      Int      @default(10) @map("max_users")
+  maxProjects   Int      @default(5) @map("max_projects")
+  maxStorageGb  Int      @default(5) @map("max_storage_gb")
+  priceMonthly  Float    @default(0) @map("price_monthly")
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("subscription_plans")
+}

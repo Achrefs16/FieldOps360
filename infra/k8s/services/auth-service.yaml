@@ -1,0 +1,21 @@
+# Auth Service - ClusterIP Service
+# Exposes the auth-service pods internally on port 3001.
+# Traefik IngressRoute routes external /api/auth traffic here.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: fieldops-dev
+  labels:
+    app: auth-service
+    app.kubernetes.io/part-of: fieldops360
+spec:
+  type: ClusterIP
+  selector:
+    app: auth-service
+  ports:
+    - port: 3001
+      targetPort: 3001
+      protocol: TCP
+      name: http

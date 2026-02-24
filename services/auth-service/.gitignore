@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+keys/*.pem
+*.log
+coverage/
+.DS_Store

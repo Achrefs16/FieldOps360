@@ -1,0 +1,101 @@
+# Auth Service - Deployment
+# Runs the NestJS auth microservice container.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: fieldops-dev
+  labels:
+    app: auth-service
+    app.kubernetes.io/part-of: fieldops360
+    app.kubernetes.io/component: microservice
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auth-service
+  template:
+    metadata:
+      labels:
+        app: auth-service
+        app.kubernetes.io/part-of: fieldops360
+        app.kubernetes.io/component: microservice
+    spec:
+      containers:
+        - name: auth-service
+          image: achrefs16/fieldops-auth-service:latest
+          ports:
+            - containerPort: 3001
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: auth-service-config
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fieldops-secrets
+                  key: postgresql-password
+            - name: PLATFORM_DATABASE_URL
+              value: "postgresql://postgres:$(DB_PASSWORD)@postgresql.fieldops-dev.svc.cluster.local:5432/fieldops_platform"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fieldops-secrets
+                  key: redis-password
+            - name: MINIO_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fieldops-secrets
+                  key: minio-access-key
+            - name: MINIO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: fieldops-secrets
+                  key: minio-secret-key
+            - name: SMTP_USER
+              valueFrom:
+                secretKeyRef:
+                  name: smtp-credentials
+                  key: smtp-user
+            - name: SMTP_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: smtp-credentials
+                  key: smtp-pass
+            - name: JWT_PRIVATE_KEY_PATH
+              value: "/etc/jwt/private.pem"
+            - name: JWT_PUBLIC_KEY_PATH
+              value: "/etc/jwt/public.pem"
+          volumeMounts:
+            - name: jwt-keys
+              mountPath: /etc/jwt
+              readOnly: true
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+          livenessProbe:
+            httpGet:
+              path: /api/auth/v1/health
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/auth/v1/health
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            readOnlyRootFilesystem: true
+      volumes:
+        - name: jwt-keys
+          secret:
+            secretName: jwt-keys
