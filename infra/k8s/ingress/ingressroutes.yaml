@@ -1,4 +1,4 @@
-apiVersion: traefik.containo.us/v1alpha1
+apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: fieldops-api-gateway
@@ -10,7 +10,7 @@ spec:
     # ----------------------------------------------------------------------
     # Auth Service
     # ----------------------------------------------------------------------
-    - match: PathPrefix(`/api/auth`)
+    - match: PathPrefix(`/api/auth`) || PathPrefix(`/api/docs`)
       kind: Rule
       services:
         - name: auth-service
