@@ -23,7 +23,7 @@ set -e
 NAMESPACE="fieldops-dev"
 IMAGE="${DOCKER_USER:-achrefs16}/fieldops-auth-service:latest"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-INFRA_DIR="$SCRIPT_DIR/../../infra"
+INFRA_DIR="$(cd "$SCRIPT_DIR/../../infra" && pwd)"
 KEYS_DIR="$SCRIPT_DIR/../keys"
 
 echo "========================================"
