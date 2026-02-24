@@ -44,14 +44,16 @@ if [ -z "$PG_POD" ]; then
   exit 1
 fi
 
-kubectl exec -n $NAMESPACE "$PG_POD" -- psql -U postgres -tc \
+PG_PASSWORD=$(kubectl get secret -n $NAMESPACE fieldops-secrets -o jsonpath='{.data.postgresql-password}' | base64 -d)
+
+kubectl exec -n $NAMESPACE "$PG_POD" -- env PGPASSWORD="$PG_PASSWORD" psql -U postgres -tc \
   "SELECT 1 FROM pg_database WHERE datname = 'fieldops_platform'" | grep -q 1 || \
-  kubectl exec -n $NAMESPACE "$PG_POD" -- psql -U postgres -c "CREATE DATABASE fieldops_platform;"
+  kubectl exec -n $NAMESPACE "$PG_POD" -- env PGPASSWORD="$PG_PASSWORD" psql -U postgres -c "CREATE DATABASE fieldops_platform;"
 echo "  fieldops_platform: OK"
 
-kubectl exec -n $NAMESPACE "$PG_POD" -- psql -U postgres -tc \
+kubectl exec -n $NAMESPACE "$PG_POD" -- env PGPASSWORD="$PG_PASSWORD" psql -U postgres -tc \
   "SELECT 1 FROM pg_database WHERE datname = 'fieldops_tenant_demo'" | grep -q 1 || \
-  kubectl exec -n $NAMESPACE "$PG_POD" -- psql -U postgres -c "CREATE DATABASE fieldops_tenant_demo;"
+  kubectl exec -n $NAMESPACE "$PG_POD" -- env PGPASSWORD="$PG_PASSWORD" psql -U postgres -c "CREATE DATABASE fieldops_tenant_demo;"
 echo "  fieldops_tenant_demo: OK"
 echo ""
 
