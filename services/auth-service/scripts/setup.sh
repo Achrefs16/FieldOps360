@@ -21,9 +21,15 @@
 set -e
 
 NAMESPACE="fieldops-dev"
-IMAGE="${DOCKER_USER:-achrefs16}/fieldops-auth-service:latest"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INFRA_DIR="$(cd "$SCRIPT_DIR/../../../infra" && pwd)"
+
+# Extract image from deployment manifest (Single Source of Truth)
+if [ -f "$INFRA_DIR/k8s/deployments/auth-service.yaml" ]; then
+  IMAGE=$(grep 'image: ' "$INFRA_DIR/k8s/deployments/auth-service.yaml" | head -1 | awk '{print $2}')
+else
+  IMAGE="${DOCKER_USER:-achrefs161}/fieldops-auth-service:latest"
+fi
 KEYS_DIR="$SCRIPT_DIR/../keys"
 
 echo "========================================"

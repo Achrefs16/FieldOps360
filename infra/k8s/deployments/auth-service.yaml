@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: auth-service
-          image: achrefs16/fieldops-auth-service:latest
+          image: achrefs161/fieldops-auth-service:latest
           ports:
             - containerPort: 3001
               protocol: TCP
