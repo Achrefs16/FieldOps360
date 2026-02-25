@@ -1,0 +1,33 @@
+# ArgoCD Application - FieldOps Dev Environment
+# This Application watches the infra/k8s/ directory in the develop branch.
+# When any K8s manifest changes in Git, ArgoCD auto-syncs to the cluster.
+
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: fieldops-dev
+  namespace: argocd
+spec:
+  project: default
+
+  # Source: where to pull manifests from
+  source:
+    repoURL: https://github.com/Achrefs16/FieldOps360.git
+    targetRevision: develop
+    path: infra/k8s
+    directory:
+      recurse: true           # Include all subdirectories
+      exclude: "00-crds/*"    # Exclude CRDs (applied separately)
+
+  # Destination: where to deploy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: fieldops-dev
+
+  # Sync Policy: automatic GitOps
+  syncPolicy:
+    automated:
+      prune: true             # Delete resources removed from Git
+      selfHeal: true          # Auto-fix manual cluster changes
+    syncOptions:
+      - CreateNamespace=true  # Create namespace if it doesn't exist
