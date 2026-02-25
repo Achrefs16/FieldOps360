@@ -17,3 +17,8 @@ output "rabbitmq_host" {
 output "minio_host" {
   value = "minio.${kubernetes_namespace.fieldops.metadata[0].name}.svc.cluster.local"
 }
+
+output "argocd_dashboard" {
+  value = "http://<VM_IP>/argocd"
+}
+

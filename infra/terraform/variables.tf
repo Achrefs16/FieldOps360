@@ -47,3 +47,16 @@ variable "minio_storage_size" {
   type    = string
   default = "2Gi"
 }
+
+# --- ArgoCD ---
+variable "argocd_repo_url" {
+  description = "Git repository URL for ArgoCD to watch"
+  type        = string
+  default     = "https://github.com/Achrefs16/FieldOps360.git"
+}
+
+variable "argocd_target_branch" {
+  description = "Git branch for ArgoCD to track"
+  type        = string
+  default     = "develop"
+}
