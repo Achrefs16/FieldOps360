@@ -12,7 +12,7 @@ resource "helm_release" "sealed_secrets" {
 
   # The controller needs to be able to modify Secrets across all namespaces
   # The default RBAC configuration created by the chart handles this.
-  
+
   values = [<<-YAML
     fullnameOverride: "sealed-secrets-controller"
     # Create the CRD (CustomResourceDefinition) for SealedSecret
