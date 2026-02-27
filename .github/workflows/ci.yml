@@ -130,3 +130,62 @@ jobs:
       - run: terraform fmt -check
       - run: terraform init -backend=false
       - run: terraform validate
+
+  # ============================================================
+  # SONARCLOUD - CODE QUALITY + SAST (Security Analysis)
+  # ============================================================
+  sonar-analysis:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.auth == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history needed for SonarCloud
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/auth-service/package-lock.json
+
+      - name: Install dependencies
+        working-directory: services/auth-service
+        run: npm ci
+
+      - name: Generate Prisma clients
+        working-directory: services/auth-service
+        run: |
+          npx prisma generate --schema=prisma/platform/schema.prisma
+          npx prisma generate --schema=prisma/tenant/schema.prisma
+
+      - name: Run tests with coverage
+        working-directory: services/auth-service
+        run: npx jest --coverage --coverageReporters=lcov || true
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================================
+  # TRIVY - DOCKER IMAGE VULNERABILITY SCANNING
+  # ============================================================
+  trivy-scan:
+    needs: [detect-changes, build-push]
+    if: github.event_name == 'push' && needs.detect-changes.outputs.auth == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/fieldops-auth-service:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'          # Don't fail the build (report only)
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+
