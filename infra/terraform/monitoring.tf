@@ -111,8 +111,10 @@ resource "kubernetes_manifest" "traefik_metrics_config" {
         }
         ports = {
           metrics = {
-            port        = 9100
-            expose      = true
+            port = 9100
+            expose = {
+              default = true
+            }
             exposedPort = 9100
           }
         }
@@ -121,16 +123,15 @@ resource "kubernetes_manifest" "traefik_metrics_config" {
   }
 }
 
-
-# --- Traefik ServiceMonitor (scrape HTTP request metrics) ---
-# This tells Prometheus to scrape Traefik's /metrics endpoint
-# giving us: requests/sec, latency, status codes (2xx/4xx/5xx)
-resource "kubernetes_manifest" "traefik_service_monitor" {
+# --- Traefik PodMonitor (scrape HTTP request metrics directly from pod) ---
+# Uses PodMonitor instead of ServiceMonitor to scrape the Traefik pod
+# directly on port 9100, giving us: requests/sec, latency, status codes
+resource "kubernetes_manifest" "traefik_pod_monitor" {
   depends_on = [helm_release.kube_prometheus]
 
   manifest = {
     apiVersion = "monitoring.coreos.com/v1"
-    kind       = "ServiceMonitor"
+    kind       = "PodMonitor"
     metadata = {
       name      = "traefik"
       namespace = "monitoring"
@@ -148,7 +149,7 @@ resource "kubernetes_manifest" "traefik_service_monitor" {
           "app.kubernetes.io/name" = "traefik"
         }
       }
-      endpoints = [{
+      podMetricsEndpoints = [{
         port     = "metrics"
         path     = "/metrics"
         interval = "30s"
@@ -156,4 +157,3 @@ resource "kubernetes_manifest" "traefik_service_monitor" {
     }
   }
 }
-
