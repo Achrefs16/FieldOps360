@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: admin-service
-          image: achrefs16/fieldops-admin-service:latest
+          image: achrefs161/fieldops-admin-service:latest
           ports:
             - containerPort: 3006
           env:
