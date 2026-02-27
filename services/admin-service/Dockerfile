@@ -1,30 +1,69 @@
-# FieldOps360 — Admin Service
-# Multi-stage build for lightweight production image
+# -----------------------------------------------------------------
+# Stage 1: Dependencies
+# -----------------------------------------------------------------
+FROM node:20-alpine AS deps
 
-# Stage 1: Build
-FROM node:20-alpine AS builder
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --only=production && \
+    cp -R node_modules /prod_modules && \
+    npm ci
 
-COPY package*.json ./
-RUN npm ci
+# -----------------------------------------------------------------
+# Stage 2: Build
+# -----------------------------------------------------------------
+FROM node:20-alpine AS builder
 
-COPY prisma ./prisma
-RUN npx prisma generate
+RUN apk add --no-cache openssl
 
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Generate Prisma client
+RUN npx prisma generate --schema=prisma/schema.prisma
+
+# Compile TypeScript
 RUN npm run build
 
-# Stage 2: Production
-FROM node:20-alpine AS production
+# -----------------------------------------------------------------
+# Stage 3: Production runner
+# -----------------------------------------------------------------
+FROM node:20-alpine AS runner
+
+RUN apk add --no-cache openssl
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nestjs
+
 WORKDIR /app
 
-ENV NODE_ENV=production
+# Production dependencies
+COPY --from=deps /prod_modules ./node_modules
 
-COPY --from=builder /app/node_modules ./node_modules
+# Prisma generated clients
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
+# Prisma CLI (needed for K8s migration Jobs)
+COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder /app/node_modules/.bin/prisma ./node_modules/.bin/prisma
+
+# Compiled code
 COPY --from=builder /app/dist ./dist
+
+# Prisma schemas (needed for migrations via K8s Jobs)
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/package*.json ./
+
+RUN chown -R nestjs:nodejs /app
+
+USER nestjs
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3006/api/admin/v1/health || exit 1
 
 EXPOSE 3006
+
+ENV NODE_ENV=production
+ENV PORT=3006
 
 CMD ["node", "dist/main.js"]
