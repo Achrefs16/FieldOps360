@@ -111,8 +111,8 @@ resource "kubernetes_manifest" "traefik_metrics_config" {
         }
         ports = {
           metrics = {
-            port       = 9100
-            expose     = true
+            port        = 9100
+            expose      = true
             exposedPort = 9100
           }
         }
