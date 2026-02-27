@@ -118,7 +118,7 @@ resource "kubernetes_manifest" "traefik_service_monitor" {
         }
       }
       endpoints = [{
-        port     = "traefik"
+        port     = "metrics"
         path     = "/metrics"
         interval = "30s"
       }]
