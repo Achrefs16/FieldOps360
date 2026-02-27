@@ -60,3 +60,10 @@ variable "argocd_target_branch" {
   type        = string
   default     = "develop"
 }
+
+# --- Observability ---
+variable "grafana_password" {
+  description = "Grafana admin password"
+  type        = string
+  sensitive   = true
+}

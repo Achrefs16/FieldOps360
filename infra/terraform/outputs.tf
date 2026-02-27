@@ -22,3 +22,7 @@ output "argocd_dashboard" {
   value = "http://<VM_IP>/argocd"
 }
 
+output "grafana_dashboard" {
+  value = "http://<VM_IP>/grafana"
+}
+
