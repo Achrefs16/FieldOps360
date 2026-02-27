@@ -91,6 +91,37 @@ resource "helm_release" "kube_prometheus" {
   ]
 }
 
+# --- Enable Traefik Prometheus Metrics (K3s HelmChartConfig) ---
+# K3s manages Traefik via HelmChart CRD. This config enables the metrics
+# entrypoint so Prometheus can scrape HTTP request data.
+resource "kubernetes_manifest" "traefik_metrics_config" {
+  manifest = {
+    apiVersion = "helm.cattle.io/v1"
+    kind       = "HelmChartConfig"
+    metadata = {
+      name      = "traefik"
+      namespace = "kube-system"
+    }
+    spec = {
+      valuesContent = yamlencode({
+        metrics = {
+          prometheus = {
+            entryPoint = "metrics"
+          }
+        }
+        ports = {
+          metrics = {
+            port       = 9100
+            expose     = true
+            exposedPort = 9100
+          }
+        }
+      })
+    }
+  }
+}
+
+
 # --- Traefik ServiceMonitor (scrape HTTP request metrics) ---
 # This tells Prometheus to scrape Traefik's /metrics endpoint
 # giving us: requests/sec, latency, status codes (2xx/4xx/5xx)
