@@ -1,0 +1,54 @@
+# Admin Service K8s Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-service
+  namespace: fieldops-dev
+  labels:
+    app: admin-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-service
+  template:
+    metadata:
+      labels:
+        app: admin-service
+    spec:
+      containers:
+        - name: admin-service
+          image: achrefs16/fieldops-admin-service:latest
+          ports:
+            - containerPort: 3006
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PLATFORM_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: fieldops-secrets
+                  key: platform-database-url
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: fieldops-secrets
+                  key: jwt-secret
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /api/admin/v1/health
+              port: 3006
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/admin/v1/health
+              port: 3006
+            initialDelaySeconds: 10
+            periodSeconds: 10

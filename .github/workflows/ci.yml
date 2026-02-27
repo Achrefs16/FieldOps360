@@ -21,6 +21,7 @@ jobs:
       resource: ${{ steps.filter.outputs.resource }}
       planning: ${{ steps.filter.outputs.planning }}
       reporting: ${{ steps.filter.outputs.reporting }}
+      admin: ${{ steps.filter.outputs.admin }}
       infra: ${{ steps.filter.outputs.infra }}
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +39,8 @@ jobs:
               - 'services/planning-service/**'
             reporting:
               - 'services/reporting-service/**'
+            admin:
+              - 'services/admin-service/**'
             infra:
               - 'infra/**'
 
@@ -93,6 +96,8 @@ jobs:
             changed: ${{ needs.detect-changes.outputs.planning }}
           - service: reporting-service
             changed: ${{ needs.detect-changes.outputs.reporting }}
+          - service: admin-service
+            changed: ${{ needs.detect-changes.outputs.admin }}
     steps:
       - uses: actions/checkout@v4
         if: matrix.changed == 'true'
