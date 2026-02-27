@@ -24,16 +24,15 @@ spec:
           env:
             - name: NODE_ENV
               value: "production"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fieldops-secrets
+                  key: postgresql-password
             - name: PLATFORM_DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: fieldops-secrets
-                  key: platform-database-url
+              value: "postgresql://postgres:$(DB_PASSWORD)@postgresql.fieldops-dev.svc.cluster.local:5432/fieldops_platform"
             - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: fieldops-secrets
-                  key: jwt-secret
+              value: "admin-secret-pfe-2026"
           resources:
             requests:
               cpu: 50m
