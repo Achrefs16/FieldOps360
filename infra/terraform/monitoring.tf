@@ -31,6 +31,14 @@ resource "helm_release" "kube_prometheus" {
           root_url: "http://192.168.50.10/grafana"
           serve_from_sub_path: true
 
+      # Auto-configure Loki as data source (no manual setup!)
+      additionalDataSources:
+        - name: Loki
+          type: loki
+          url: http://loki.monitoring.svc.cluster.local:3100
+          access: proxy
+          isDefault: false
+
       # Lightweight resources for 8GB VM
       resources:
         requests:
@@ -58,7 +66,7 @@ resource "helm_release" "kube_prometheus" {
           limits:
             memory: 1Gi
 
-        # Scrape all namespaces (fieldops-dev, argocd, monitoring)
+        # Scrape all namespaces (fieldops-dev, argocd, monitoring, kube-system)
         serviceMonitorSelectorNilUsesHelmValues: false
         podMonitorSelectorNilUsesHelmValues: false
 
@@ -82,3 +90,39 @@ resource "helm_release" "kube_prometheus" {
   YAML
   ]
 }
+
+# --- Traefik ServiceMonitor (scrape HTTP request metrics) ---
+# This tells Prometheus to scrape Traefik's /metrics endpoint
+# giving us: requests/sec, latency, status codes (2xx/4xx/5xx)
+resource "kubernetes_manifest" "traefik_service_monitor" {
+  depends_on = [helm_release.kube_prometheus]
+
+  manifest = {
+    apiVersion = "monitoring.coreos.com/v1"
+    kind       = "ServiceMonitor"
+    metadata = {
+      name      = "traefik"
+      namespace = "monitoring"
+      labels = {
+        release = "kube-prometheus"
+      }
+    }
+    spec = {
+      jobLabel = "traefik"
+      namespaceSelector = {
+        matchNames = ["kube-system"]
+      }
+      selector = {
+        matchLabels = {
+          "app.kubernetes.io/name" = "traefik"
+        }
+      }
+      endpoints = [{
+        port     = "traefik"
+        path     = "/metrics"
+        interval = "30s"
+      }]
+    }
+  }
+}
+
