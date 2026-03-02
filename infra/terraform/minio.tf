@@ -50,6 +50,10 @@ resource "kubernetes_deployment" "minio" {
               }
             }
           }
+          env {
+            name  = "MINIO_CONSOLE_SUBPATH"
+            value = "/minio"
+          }
           resources {
             requests = { cpu = "25m", memory = "128Mi" }
             limits   = { memory = "512Mi" }
