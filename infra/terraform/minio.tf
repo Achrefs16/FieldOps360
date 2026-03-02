@@ -50,14 +50,6 @@ resource "kubernetes_deployment" "minio" {
               }
             }
           }
-          env {
-            name  = "MINIO_CONSOLE_SUBPATH"
-            value = "/minio"
-          }
-          env {
-            name  = "MINIO_BROWSER_REDIRECT_URL"
-            value = "http://192.168.50.10/minio"
-          }
           resources {
             requests = { cpu = "25m", memory = "128Mi" }
             limits   = { memory = "512Mi" }
@@ -82,14 +74,18 @@ resource "kubernetes_service" "minio" {
     namespace = kubernetes_namespace.fieldops.metadata[0].name
   }
   spec {
+    type     = "NodePort"
     selector = { app = "minio" }
     port {
-      name = "api"
-      port = 9000
+      name        = "api"
+      port        = 9000
+      target_port = 9000
     }
     port {
-      name = "console"
-      port = 9001
+      name        = "console"
+      port        = 9001
+      target_port = 9001
+      node_port   = 30901
     }
   }
 }
