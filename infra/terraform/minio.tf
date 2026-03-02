@@ -74,18 +74,14 @@ resource "kubernetes_service" "minio" {
     namespace = kubernetes_namespace.fieldops.metadata[0].name
   }
   spec {
-    type     = "NodePort"
     selector = { app = "minio" }
     port {
-      name        = "api"
-      port        = 9000
-      target_port = 9000
+      name = "api"
+      port = 9000
     }
     port {
-      name        = "console"
-      port        = 9001
-      target_port = 9001
-      node_port   = 30901
+      name = "console"
+      port = 9001
     }
   }
 }
