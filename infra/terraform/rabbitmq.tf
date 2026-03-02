@@ -12,6 +12,16 @@ resource "kubernetes_persistent_volume_claim" "rabbitmq" {
   }
 }
 
+resource "kubernetes_config_map" "rabbitmq_config" {
+  metadata {
+    name      = "rabbitmq-config"
+    namespace = kubernetes_namespace.fieldops.metadata[0].name
+  }
+  data = {
+    "10-path-prefix.conf" = "management.path_prefix = /rabbitmq"
+  }
+}
+
 resource "kubernetes_deployment" "rabbitmq" {
   depends_on = [helm_release.redis, kubernetes_secret.fieldops_secrets]
 
@@ -52,10 +62,21 @@ resource "kubernetes_deployment" "rabbitmq" {
             name       = "data"
             mount_path = "/var/lib/rabbitmq"
           }
+          volume_mount {
+            name       = "config"
+            mount_path = "/etc/rabbitmq/conf.d/10-path-prefix.conf"
+            sub_path   = "10-path-prefix.conf"
+          }
         }
         volume {
           name = "data"
           persistent_volume_claim { claim_name = "rabbitmq-data" }
+        }
+        volume {
+          name = "config"
+          config_map {
+            name = kubernetes_config_map.rabbitmq_config.metadata[0].name
+          }
         }
       }
     }

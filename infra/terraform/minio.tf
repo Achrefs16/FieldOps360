@@ -50,6 +50,14 @@ resource "kubernetes_deployment" "minio" {
               }
             }
           }
+          env {
+            name  = "MINIO_BROWSER_REDIRECT_URL"
+            value = "http://192.168.50.10/minio"
+          }
+          env {
+            name  = "MINIO_SERVER_URL"
+            value = "http://192.168.50.10/minio"
+          }
           resources {
             requests = { cpu = "25m", memory = "128Mi" }
             limits   = { memory = "512Mi" }
