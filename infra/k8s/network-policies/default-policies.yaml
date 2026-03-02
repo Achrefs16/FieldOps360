@@ -7,9 +7,7 @@ kind: NetworkPolicy
 metadata:
   name: allow-traefik-ingress
 spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/part-of: fieldops360
+  podSelector: {} # Allow Traefik to access any pod on permitted ports
   policyTypes:
     - Ingress
   ingress:
@@ -31,6 +29,10 @@ spec:
           port: 3004
         - protocol: TCP
           port: 3005
+        - protocol: TCP
+          port: 9001   # MinIO Console
+        - protocol: TCP
+          port: 15672  # RabbitMQ Management
 ---
 # Allow services to connect to databases within same namespace
 apiVersion: networking.k8s.io/v1
@@ -38,9 +40,7 @@ kind: NetworkPolicy
 metadata:
   name: allow-services-to-data
 spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/component: data
+  podSelector: {} # Apply to all data store pods
   policyTypes:
     - Ingress
   ingress:
