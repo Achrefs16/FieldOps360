@@ -14,45 +14,24 @@ resource "helm_release" "argocd" {
   namespace  = kubernetes_namespace.argocd.metadata[0].name
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-cd"
-  version    = "7.7.5"
+  version    = "7.8.26"
   timeout    = 600
   wait       = true
 
   values = [<<-YAML
     server:
       insecure: true
-      extraArgs:
-        - --basehref=/argocd
     configs:
       params:
         server.insecure: true
+        server.rootpath: "/argocd"
   YAML
   ]
 }
 
-# --- Traefik StripPrefix Middleware for ArgoCD ---
-resource "kubernetes_manifest" "argocd_stripprefix" {
-  depends_on = [helm_release.argocd]
-
-  manifest = {
-    apiVersion = "traefik.io/v1alpha1"
-    kind       = "Middleware"
-    metadata = {
-      name      = "argocd-stripprefix"
-      namespace = "argocd"
-    }
-    spec = {
-      stripPrefix = {
-        prefixes   = ["/argocd"]
-        forceSlash = false
-      }
-    }
-  }
-}
-
 # --- Traefik IngressRoute for ArgoCD Dashboard ---
 resource "kubernetes_manifest" "argocd_ingress" {
-  depends_on = [helm_release.argocd, kubernetes_manifest.argocd_stripprefix]
+  depends_on = [helm_release.argocd]
 
   manifest = {
     apiVersion = "traefik.io/v1alpha1"
@@ -66,10 +45,6 @@ resource "kubernetes_manifest" "argocd_ingress" {
       routes = [{
         match = "PathPrefix(`/argocd`)"
         kind  = "Rule"
-        middlewares = [{
-          name      = "argocd-stripprefix"
-          namespace = "argocd"
-        }]
         services = [{
           name = "argocd-server"
           port = 80
