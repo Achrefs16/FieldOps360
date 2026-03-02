@@ -1,0 +1,27 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-minio-prefix
+  namespace: fieldops-dev
+spec:
+  stripPrefix:
+    prefixes:
+      - /minio
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: minio-console
+  namespace: fieldops-dev
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/minio`)
+      kind: Rule
+      middlewares:
+        - name: strip-minio-prefix
+          namespace: fieldops-dev
+      services:
+        - name: minio
+          port: 9001
