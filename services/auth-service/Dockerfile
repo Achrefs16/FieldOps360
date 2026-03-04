@@ -34,6 +34,15 @@ FROM node:20-alpine AS runner
 
 RUN apk add --no-cache openssl
 
+# Remove package managers - not needed at runtime, and they carry
+# their own vulnerable transitive deps (cross-spawn, glob, etc.)
+RUN rm -rf /usr/local/lib/node_modules/npm \
+           /usr/local/bin/npm \
+           /usr/local/bin/npx \
+           /opt/yarn* \
+           /usr/local/bin/yarn \
+           /usr/local/bin/yarnpkg
+
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nestjs
 
