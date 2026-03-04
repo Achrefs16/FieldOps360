@@ -16,6 +16,8 @@ resource "helm_release" "jaeger" {
       type: memory
     allInOne:
       enabled: true
+      args:
+        - "--query.base-path=/jaeger"
       resources:
         requests:
           cpu: 100m
