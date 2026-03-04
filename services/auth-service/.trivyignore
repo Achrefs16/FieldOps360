@@ -1,0 +1,12 @@
+# Trivy Vulnerability Ignore File
+# Format: CVE-ID [expiration-date] [comment]
+#
+# These CVEs are acknowledged and accepted for the following reasons.
+# Each entry must be reviewed before the project goes to production.
+
+# CVE-2026-27904 - glob: ReDoS via backtracking in glob expressions
+# Reason: The `glob` package is a transitive dependency of jest/test-exclude (devDependency).
+# It is NOT used at runtime in the Docker image. Fixing it would require glob v11
+# which breaks the jest test-exclude package. Risk is accepted for dev tooling only.
+# Review: Upgrade test-exclude when it officially supports glob v11.
+CVE-2026-27904

@@ -193,4 +193,5 @@ jobs:
           exit-code: '1'          # Fail the build if vulnerabilities are found
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
+          trivyignores: 'services/auth-service/.trivyignore'
 
