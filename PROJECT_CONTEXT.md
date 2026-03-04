@@ -252,6 +252,7 @@ All routes in `infra/k8s/ingress/ingressroutes.yaml`:
 | `/api/reports` | reporting-service | 3005 | ❌ Placeholder |
 | `/argocd` | argocd-server (argocd ns) | 80 | ✅ Working |
 | `/grafana` | kube-prometheus-grafana (monitoring ns) | 80 | ✅ Working |
+| `/jaeger` | jaeger-query (monitoring ns) | 16686 | ✅ Working |
 
 ---
 
@@ -351,8 +352,8 @@ GitHub Actions Secrets:
 5. **Implement reporting-service** (Rust) — KPIs, PDF/Excel generation, analytics
 6. **Build web frontend** (React) — Dashboard, Gantt, GPS map
 7. **Add OpenTelemetry** to all services for distributed tracing
-8. **Deploy Jaeger** for tracing visualization
-9. **Create custom Grafana dashboards** for business metrics
+8. ~~**Deploy Jaeger** for tracing visualization~~ (Done)
+9. ~~**Create custom Grafana dashboards**~~ (Done for Auth-Service HTTP Traffic)
 
 ### Low Priority
 10. **Build mobile app** (React Native) — Field worker app with GPS and camera
