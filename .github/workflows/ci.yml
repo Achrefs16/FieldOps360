@@ -167,7 +167,7 @@ jobs:
 
       - name: Run tests with coverage
         working-directory: services/auth-service
-        run: npx jest --coverage --coverageReporters=lcov || true
+        run: npx jest --coverage --coverageReporters=lcov
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@v3
@@ -190,7 +190,7 @@ jobs:
         with:
           image-ref: '${{ secrets.DOCKERHUB_USERNAME }}/fieldops-auth-service:${{ github.sha }}'
           format: 'table'
-          exit-code: '0'          # Don't fail the build (report only)
+          exit-code: '1'          # Fail the build if vulnerabilities are found
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
 

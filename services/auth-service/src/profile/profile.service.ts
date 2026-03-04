@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import * as Minio from 'minio';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'crypto';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -137,7 +137,7 @@ export class ProfileService {
 
         // Generate unique filename
         const ext = file.originalname.split('.').pop();
-        const objectName = `${req.tenantSubdomain}/${userId}/${uuidv4()}.${ext}`;
+        const objectName = `${req.tenantSubdomain}/${userId}/${randomUUID()}.${ext}`;
 
         // Upload to MinIO
         await this.minioClient.putObject(
