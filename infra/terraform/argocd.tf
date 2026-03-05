@@ -87,8 +87,8 @@ resource "kubernetes_manifest" "argocd_app" {
         syncOptions = ["CreateNamespace=true"]
       }
       ignoreDifferences = [{
-        group = "apps"
-        kind  = "Deployment"
+        group        = "apps"
+        kind         = "Deployment"
         jsonPointers = ["/spec/template/metadata/annotations/kubectl.kubernetes.io~1restartedAt"]
       }]
     }
