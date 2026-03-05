@@ -13,6 +13,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "prisma:generate": "prisma generate --schema=prisma/platform/schema.prisma && prisma generate --schema=prisma/tenant/schema.prisma",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
@@ -78,24 +79,40 @@
     "rootDir": "src",
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": {
+            "isolatedModules": true
+          },
+          "diagnostics": {
+            "ignoreCodes": [
+              151002
+            ]
+          },
+          "babelConfig": false
+        }
+      ]
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.(t|j)s",
+      "!**/*.spec.ts",
+      "!**/*.module.ts",
+      "!**/main.ts"
     ],
     "coveragePathIgnorePatterns": [
       "/node_modules/",
-      "src/main.ts",
-      "src/database/prisma/seed.ts"
+      "\\.spec\\.ts$",
+      "src/main.ts"
     ],
+    "coverageProvider": "v8",
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "extensionsToTreatAsEsm": [".ts"]
   },
   "overrides": {
     "tar": ">=7.5.8",
     "cross-spawn": ">=7.0.5",
-    "fast-xml-parser": ">=4.5.4",
-    "minimatch": ">=9.0.7",
-    "glob": ">=10.5.0 <11.0.0"
+    "fast-xml-parser": ">=4.5.4"
   }
 }
