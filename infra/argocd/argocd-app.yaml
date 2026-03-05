@@ -31,3 +31,10 @@ spec:
       selfHeal: true          # Auto-fix manual cluster changes
     syncOptions:
       - CreateNamespace=true  # Create namespace if it doesn't exist
+
+  # Ignore drift caused by CD pipeline's 'kubectl rollout restart'
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/template/metadata/annotations/kubectl.kubernetes.io~1restartedAt
