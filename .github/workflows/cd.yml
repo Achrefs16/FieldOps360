@@ -21,14 +21,10 @@ jobs:
       - name: Deploy to dev namespace
         run: |
           NAMESPACE="fieldops-dev"
-          TAG="${{ github.event.workflow_run.head_sha }}"
-          DOCKER_USER="${{ secrets.DOCKERHUB_USERNAME }}"
 
           for SERVICE in auth-service project-service resource-service planning-service reporting-service; do
             if kubectl get deployment $SERVICE -n $NAMESPACE 2>/dev/null; then
-              kubectl set image deployment/$SERVICE \
-                $SERVICE=$DOCKER_USER/fieldops-$SERVICE:$TAG \
-                -n $NAMESPACE
+              kubectl rollout restart deployment/$SERVICE -n $NAMESPACE
               kubectl rollout status deployment/$SERVICE -n $NAMESPACE --timeout=120s
             fi
           done
@@ -48,14 +44,10 @@ jobs:
       - name: Deploy to prod namespace
         run: |
           NAMESPACE="fieldops-prod"
-          TAG="${{ github.event.workflow_run.head_sha }}"
-          DOCKER_USER="${{ secrets.DOCKERHUB_USERNAME }}"
 
           for SERVICE in auth-service project-service resource-service planning-service reporting-service; do
             if kubectl get deployment $SERVICE -n $NAMESPACE 2>/dev/null; then
-              kubectl set image deployment/$SERVICE \
-                $SERVICE=$DOCKER_USER/fieldops-$SERVICE:$TAG \
-                -n $NAMESPACE
+              kubectl rollout restart deployment/$SERVICE -n $NAMESPACE
               kubectl rollout status deployment/$SERVICE -n $NAMESPACE --timeout=180s
             fi
           done
