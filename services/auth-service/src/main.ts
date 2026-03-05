@@ -1,10 +1,28 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
+import { annotateHttpSpan, closeJaegerTracer, getJaegerTracer } from './tracing/jaeger.tracer';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const tracer = getJaegerTracer();
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    const span = tracer.startSpan(`${req.method} ${req.path}`);
+
+    res.on('finish', () => {
+      annotateHttpSpan(span, {
+        method: req.method,
+        path: req.originalUrl || req.url,
+        statusCode: res.statusCode,
+      });
+      span.finish();
+    });
+
+    next();
+  });
 
   // Global API prefix: /api
   app.setGlobalPrefix('api');
@@ -54,6 +72,10 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
+
+  app.enableShutdownHooks();
+  process.on('SIGTERM', () => closeJaegerTracer());
+  process.on('SIGINT', () => closeJaegerTracer());
 
   console.log(`
   Auth Service is running
