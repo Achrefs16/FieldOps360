@@ -3,6 +3,10 @@
 
 name: CD
 
+concurrency:
+  group: cd-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: true
+
 on:
   workflow_run:
     workflows: ["CI"]
@@ -17,8 +21,29 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Skip outdated run
+        id: guard
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          LATEST="$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)"
+
+          echo "workflow sha: $SHA"
+          echo "branch latest: $LATEST"
+
+          if [ "$SHA" != "$LATEST" ]; then
+            echo "Outdated CD run detected. Skipping deployment."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Deploy to dev namespace
+        if: steps.guard.outputs.skip != 'true'
         run: |
           NAMESPACE="fieldops-dev"
 
@@ -30,6 +55,7 @@ jobs:
           done
 
       - name: Status
+        if: steps.guard.outputs.skip != 'true'
         run: kubectl get pods -n fieldops-dev
 
   deploy-prod:
@@ -40,8 +66,29 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Skip outdated run
+        id: guard
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          LATEST="$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)"
+
+          echo "workflow sha: $SHA"
+          echo "branch latest: $LATEST"
+
+          if [ "$SHA" != "$LATEST" ]; then
+            echo "Outdated CD run detected. Skipping deployment."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Deploy to prod namespace
+        if: steps.guard.outputs.skip != 'true'
         run: |
           NAMESPACE="fieldops-prod"
 
@@ -53,4 +100,5 @@ jobs:
           done
 
       - name: Status
+        if: steps.guard.outputs.skip != 'true'
         run: kubectl get pods -n fieldops-prod
