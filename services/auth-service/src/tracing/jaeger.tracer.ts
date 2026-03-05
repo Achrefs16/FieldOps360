@@ -25,6 +25,10 @@ export function getJaegerTracer(): Tracer {
     return tracer;
   }
 
+  const collectorEndpoint =
+    process.env.JAEGER_COLLECTOR_ENDPOINT ||
+    'http://jaeger-collector.monitoring.svc.cluster.local:14268/api/traces';
+
   const config: TracingConfig = {
     serviceName: process.env.JAEGER_SERVICE_NAME || 'auth-service',
     sampler: {
@@ -33,7 +37,8 @@ export function getJaegerTracer(): Tracer {
     },
     reporter: {
       logSpans: toBoolean(process.env.JAEGER_LOG_SPANS, false),
-      agentHost: process.env.JAEGER_AGENT_HOST || 'jaeger-all-in-one.monitoring.svc.cluster.local',
+      collectorEndpoint,
+      agentHost: process.env.JAEGER_AGENT_HOST,
       agentPort: toNumber(process.env.JAEGER_AGENT_PORT, 6831),
     },
   };
