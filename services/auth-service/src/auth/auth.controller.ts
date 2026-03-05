@@ -15,8 +15,8 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { TenantRequest } from '../common/middleware/tenant.middleware';
-import { JwtPayload } from './strategies/jwt.strategy';
+import type { TenantRequest } from '../common/middleware/tenant.middleware';
+import type { JwtPayload } from './strategies/jwt.strategy';
 
 @ApiTags('Authentication')
 @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant subdomain (e.g. "demo")', required: true })

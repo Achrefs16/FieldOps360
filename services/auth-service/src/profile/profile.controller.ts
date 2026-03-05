@@ -15,8 +15,8 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { TenantRequest } from '../common/middleware/tenant.middleware';
-import { JwtPayload } from '../auth/strategies/jwt.strategy';
+import type { TenantRequest } from '../common/middleware/tenant.middleware';
+import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 @ApiTags('Profile')
 @ApiBearerAuth('JWT')
