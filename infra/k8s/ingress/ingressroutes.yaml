@@ -5,7 +5,8 @@ metadata:
   namespace: fieldops-dev
 spec:
   entryPoints:
-    - web
+    - websecure
+  tls: {}
   routes:
     # ----------------------------------------------------------------------
     # Auth Service

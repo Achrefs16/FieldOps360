@@ -1,0 +1,17 @@
+apiVersion: traefik.io/v1alpha1
+kind: TLSStore
+metadata:
+  name: default
+  namespace: fieldops-dev
+spec:
+  defaultCertificate:
+    secretName: default-cert
+---
+apiVersion: traefik.io/v1alpha1
+kind: TLSStore
+metadata:
+  name: default
+  namespace: monitoring
+spec:
+  defaultCertificate:
+    secretName: default-cert

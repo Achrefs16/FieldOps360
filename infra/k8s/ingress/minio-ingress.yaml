@@ -6,7 +6,8 @@ metadata:
   namespace: fieldops-dev
 spec:
   entryPoints:
-    - web
+    - websecure
+  tls: {}
   routes:
     - match: Host(`minio.fieldops.local`)
       kind: Rule
