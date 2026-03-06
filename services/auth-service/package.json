@@ -118,6 +118,7 @@
   "overrides": {
     "tar": ">=7.5.8",
     "cross-spawn": ">=7.0.5",
-    "fast-xml-parser": ">=4.5.4"
+    "fast-xml-parser": ">=4.5.4",
+    "multer": ">=2.1.1"
   }
 }
