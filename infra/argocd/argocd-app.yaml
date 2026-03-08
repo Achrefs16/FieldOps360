@@ -22,7 +22,7 @@ spec:
   # Destination: where to deploy
   destination:
     server: https://kubernetes.default.svc
-    namespace: fieldops-dev
+    # No namespace override: each manifest controls its own namespace
 
   # Sync Policy: automatic GitOps
   syncPolicy:

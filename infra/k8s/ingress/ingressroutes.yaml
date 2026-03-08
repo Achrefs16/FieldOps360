@@ -2,7 +2,7 @@ apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: fieldops-api-gateway
-  namespace: fieldops-dev
+  namespace: fieldops-gateway
 spec:
   entryPoints:
     - websecure
@@ -13,42 +13,18 @@ spec:
     # ----------------------------------------------------------------------
     - match: PathPrefix(`/api/auth`) || PathPrefix(`/api/docs`)
       kind: Rule
+      middlewares:
+        - name: rate-limit-auth
+          namespace: fieldops-auth
+        - name: security-headers
+          namespace: fieldops-auth
+        - name: compress
+          namespace: fieldops-auth
+        - name: retry-auth
+          namespace: fieldops-auth
+        - name: circuit-breaker-auth
+          namespace: fieldops-auth
       services:
         - name: auth-service
           port: 3001
-
-    # ----------------------------------------------------------------------
-    # Project Service
-    # ----------------------------------------------------------------------
-    - match: PathPrefix(`/api/projects`) || PathPrefix(`/api/tasks`) || PathPrefix(`/api/phases`)
-      kind: Rule
-      services:
-        - name: project-service
-          port: 3002
-
-    # ----------------------------------------------------------------------
-    # Resource Service
-    # ----------------------------------------------------------------------
-    - match: PathPrefix(`/api/resources`) || PathPrefix(`/api/vehicles`) || PathPrefix(`/api/equipment`)
-      kind: Rule
-      services:
-        - name: resource-service
-          port: 3003
-
-    # ----------------------------------------------------------------------
-    # Planning Service
-    # ----------------------------------------------------------------------
-    - match: PathPrefix(`/api/planning`)
-      kind: Rule
-      services:
-        - name: planning-service
-          port: 3004
-
-    # ----------------------------------------------------------------------
-    # Reporting Service
-    # ----------------------------------------------------------------------
-    - match: PathPrefix(`/api/reports`)
-      kind: Rule
-      services:
-        - name: reporting-service
-          port: 3005
+          namespace: fieldops-auth

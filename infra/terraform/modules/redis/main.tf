@@ -1,28 +1,26 @@
 resource "helm_release" "redis" {
-  depends_on = [helm_release.postgresql]
-
   name       = "redis"
-  namespace  = kubernetes_namespace.fieldops.metadata[0].name
+  namespace  = var.namespace
   repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "redis"
+  version    = var.chart_version
   timeout    = 600
   wait       = true
 
   values = [<<-YAML
     architecture: standalone
     auth:
-      existingSecret: "fieldops-secrets"
-      existingSecretPasswordKey: "redis-password"
+      password: ${var.password}
     master:
       persistence:
         storageClass: local-path
-        size: 1Gi
+        size: ${var.storage_size}
       resources:
         requests:
-          cpu: 25m
-          memory: 64Mi
+          cpu: ${var.cpu_request}
+          memory: ${var.memory_request}
         limits:
-          memory: 256Mi
+          memory: ${var.memory_limit}
   YAML
   ]
 }

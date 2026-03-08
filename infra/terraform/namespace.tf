@@ -1,9 +1,2 @@
-resource "kubernetes_namespace" "fieldops" {
-  metadata {
-    name = "fieldops-${var.environment}"
-    labels = {
-      "app.kubernetes.io/part-of" = "fieldops360"
-      "environment"               = var.environment
-    }
-  }
-}
+# Namespaces are fully managed by module.logical_namespaces in main.tf.
+# This file is intentionally kept as a marker to preserve file structure.

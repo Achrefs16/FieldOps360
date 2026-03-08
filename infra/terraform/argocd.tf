@@ -73,11 +73,12 @@ resource "kubernetes_manifest" "argocd_app" {
         path           = "infra/k8s"
         directory = {
           recurse = true
+          exclude = "00-crds/*"
         }
       }
       destination = {
-        server    = "https://kubernetes.default.svc"
-        namespace = kubernetes_namespace.fieldops.metadata[0].name
+        server = "https://kubernetes.default.svc"
+        # No namespace override - let each manifest specify its own namespace
       }
       syncPolicy = {
         automated = {

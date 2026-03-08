@@ -67,3 +67,15 @@ variable "grafana_password" {
   type        = string
   sensitive   = true
 }
+
+variable "enable_modular_stack" {
+  description = "Enable module-based infra resources in parallel with legacy flat files"
+  type        = bool
+  default     = false
+}
+
+variable "public_base_url" {
+  description = "Public base URL used to build UI links (example: https://fieldops.example.com or http://192.168.50.10)"
+  type        = string
+  default     = ""
+}

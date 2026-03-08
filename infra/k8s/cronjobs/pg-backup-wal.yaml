@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pg-backup-config
+  namespace: fieldops-data
+data:
+  archive_command.sh: |
+    #!/bin/sh
+    # WAL archiving script for PostgreSQL
+    # NOTE: This script runs inside the PostgreSQL pod.
+    # MinIO credentials must be available as environment variables
+    # in the PostgreSQL container. The Terraform postgresql module
+    # mounts this script via extraVolumes.
+    #
+    # If MinIO credentials are not set, WAL archiving will be skipped
+    # with a warning (non-fatal) to avoid blocking PostgreSQL.
+    set -e
+    if [ -z "$MINIO_ACCESS_KEY" ] || [ -z "$MINIO_SECRET_KEY" ]; then
+      echo "WARNING: MinIO credentials not set, skipping WAL archive for $1" >&2
+      exit 0
+    fi
+    mc alias set minio http://minio:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
+    mc cp /var/lib/postgresql/data/pg_wal/$1 minio/fieldops-backups/wal/$1

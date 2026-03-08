@@ -6,7 +6,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: auth-service
-  namespace: fieldops-dev
+  namespace: fieldops-auth
   labels:
     app: auth-service
     app.kubernetes.io/part-of: fieldops360

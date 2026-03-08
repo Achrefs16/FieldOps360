@@ -5,19 +5,19 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: auth-service-config
-  namespace: fieldops-dev
+  namespace: fieldops-auth
   labels:
     app: auth-service
     app.kubernetes.io/part-of: fieldops360
 data:
   NODE_ENV: "production"
   PORT: "3001"
-  DB_HOST: "postgresql.fieldops-dev.svc.cluster.local"
+  DB_HOST: "postgresql.fieldops-data.svc.cluster.local"
   DB_PORT: "5432"
   DB_USER: "postgres"
-  REDIS_HOST: "redis-master.fieldops-dev.svc.cluster.local"
+  REDIS_HOST: "redis-master.fieldops-data.svc.cluster.local"
   REDIS_PORT: "6379"
-  MINIO_ENDPOINT: "minio.fieldops-dev.svc.cluster.local"
+  MINIO_ENDPOINT: "minio.fieldops-data.svc.cluster.local"
   MINIO_PORT: "9000"
   MINIO_BUCKET: "avatars"
   MINIO_USE_SSL: "false"
@@ -26,8 +26,13 @@ data:
   SMTP_HOST: "sandbox.smtp.mailtrap.io"
   SMTP_PORT: "2525"
   SMTP_FROM: "noreply@fieldops360.com"
+  OTEL_SERVICE_NAME: "auth-service"
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger-collector.fieldops-observability.svc.cluster.local:4318"
+  OTEL_TRACES_SAMPLER: "always_on"
+  LOG_FORMAT: "json"
+  LOG_LEVEL: "info"
   JAEGER_SERVICE_NAME: "auth-service"
-  JAEGER_COLLECTOR_ENDPOINT: "http://jaeger-collector.monitoring.svc.cluster.local:14268/api/traces"
+  JAEGER_COLLECTOR_ENDPOINT: "http://jaeger-collector.fieldops-observability.svc.cluster.local:14268/api/traces"
   JAEGER_SAMPLER_TYPE: "const"
   JAEGER_SAMPLER_PARAM: "1"
   JAEGER_LOG_SPANS: "false"

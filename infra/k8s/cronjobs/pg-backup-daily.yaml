@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pg-backup-daily
+  namespace: fieldops-data
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/role: "backup-job"
+            vault.hashicorp.com/agent-inject-secret-db: "secret/data/postgresql"
+            vault.hashicorp.com/agent-inject-template-db: |
+              {{- with secret "secret/data/postgresql" -}}
+              export PGPASSWORD="{{ .Data.data.password }}"
+              {{- end -}}
+            vault.hashicorp.com/agent-inject-secret-minio: "secret/data/minio"
+            vault.hashicorp.com/agent-inject-template-minio: |
+              {{- with secret "secret/data/minio" -}}
+              export MINIO_ACCESS_KEY="{{ .Data.data.access_key }}"
+              export MINIO_SECRET_KEY="{{ .Data.data.secret_key }}"
+              {{- end -}}
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-dump
+              image: postgres:15-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  source /vault/secrets/db
+                  source /vault/secrets/minio
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  pg_dump -h postgresql -U postgres -Fc -Z9 -f /tmp/backup_${TIMESTAMP}.dump fieldops_platform
+                  mc alias set minio http://minio:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
+                  mc cp /tmp/backup_${TIMESTAMP}.dump minio/fieldops-backups/daily/
+                  mc rm --recursive --older-than 90d minio/fieldops-backups/daily/

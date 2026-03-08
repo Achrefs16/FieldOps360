@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pg-restore-test-monthly
+  namespace: fieldops-data
+spec:
+  schedule: "0 3 1 * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          annotations:
+            vault.hashicorp.com/agent-inject: "true"
+            vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/role: "backup-job"
+            vault.hashicorp.com/agent-inject-secret-db: "secret/data/postgresql"
+            vault.hashicorp.com/agent-inject-template-db: |
+              {{- with secret "secret/data/postgresql" -}}
+              export PGPASSWORD="{{ .Data.data.password }}"
+              {{- end -}}
+            vault.hashicorp.com/agent-inject-secret-minio: "secret/data/minio"
+            vault.hashicorp.com/agent-inject-template-minio: |
+              {{- with secret "secret/data/minio" -}}
+              export MINIO_ACCESS_KEY="{{ .Data.data.access_key }}"
+              export MINIO_SECRET_KEY="{{ .Data.data.secret_key }}"
+              {{- end -}}
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: restore-test
+              image: postgres:15-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  source /vault/secrets/db
+                  source /vault/secrets/minio
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  mc alias set minio http://minio:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
+                  LATEST=$(mc ls minio/fieldops-backups/daily/ | tail -n 1 | awk '{print $5}')
+                  if [ -z "$LATEST" ]; then
+                    echo "No backup found"; exit 1
+                  fi
+                  mc cp minio/fieldops-backups/daily/$LATEST /tmp/latest.dump
+                  createdb -h postgresql -U postgres restore_test_${TIMESTAMP}
+                  pg_restore -h postgresql -U postgres -d restore_test_${TIMESTAMP} /tmp/latest.dump
+                  psql -h postgresql -U postgres -d restore_test_${TIMESTAMP} -c "SELECT NOW();"
+                  dropdb -h postgresql -U postgres restore_test_${TIMESTAMP}
