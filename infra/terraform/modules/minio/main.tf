@@ -7,10 +7,13 @@ resource "helm_release" "minio" {
   wait       = true
 
   values = [<<-YAML
+    image:
+      tag: latest
     auth:
       rootUser: "${var.access_key}"
       rootPassword: "${var.secret_key}"
     mode: standalone
+    defaultBuckets: "fieldops-uploads,fieldops-backups,fieldops-terraform-state"
     persistence:
       storageClass: local-path
       size: ${var.storage_size}

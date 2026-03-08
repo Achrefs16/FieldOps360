@@ -7,6 +7,8 @@ resource "helm_release" "rabbitmq" {
   wait       = false
 
   values = [<<-YAML
+    image:
+      tag: latest
     auth:
       username: fieldops
       password: "${var.password}"
