@@ -73,7 +73,7 @@ module "minio_modular" {
 }
 
 module "observability_modular" {
-  count = var.enable_modular_stack ? 1 : 0
+  count = var.enable_modular_stack && var.enable_observability ? 1 : 0
 
   source                  = "./modules/observability"
   namespace               = module.logical_namespaces["observability"].name

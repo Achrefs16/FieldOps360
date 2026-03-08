@@ -3,6 +3,8 @@
 
 # --- ArgoCD Namespace ---
 resource "kubernetes_namespace" "argocd" {
+  count = var.enable_argocd ? 1 : 0
+
   metadata {
     name = "argocd"
   }
@@ -10,12 +12,12 @@ resource "kubernetes_namespace" "argocd" {
 
 # --- ArgoCD Helm Release ---
 resource "helm_release" "argocd" {
+  count      = var.enable_argocd ? 1 : 0
   name       = "argocd"
-  namespace  = kubernetes_namespace.argocd.metadata[0].name
+  namespace  = kubernetes_namespace.argocd[0].metadata[0].name
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-cd"
-  version    = "7.8.26"
-  timeout    = 600
+  timeout    = 900
   wait       = true
 
   values = [<<-YAML
@@ -31,6 +33,7 @@ resource "helm_release" "argocd" {
 
 # --- Traefik IngressRoute for ArgoCD Dashboard ---
 resource "kubernetes_manifest" "argocd_ingress" {
+  count      = var.enable_argocd ? 1 : 0
   depends_on = [helm_release.argocd]
 
   manifest = {
@@ -56,6 +59,7 @@ resource "kubernetes_manifest" "argocd_ingress" {
 
 # --- ArgoCD Application (watches infra/k8s/) ---
 resource "kubernetes_manifest" "argocd_app" {
+  count      = var.enable_argocd ? 1 : 0
   depends_on = [helm_release.argocd]
 
   manifest = {
@@ -78,7 +82,6 @@ resource "kubernetes_manifest" "argocd_app" {
       }
       destination = {
         server = "https://kubernetes.default.svc"
-        # No namespace override - let each manifest specify its own namespace
       }
       syncPolicy = {
         automated = {

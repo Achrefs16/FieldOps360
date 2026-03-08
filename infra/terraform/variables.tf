@@ -69,7 +69,19 @@ variable "grafana_password" {
 }
 
 variable "enable_modular_stack" {
-  description = "Enable module-based infra resources in parallel with legacy flat files"
+  description = "Enable module-based infra resources"
+  type        = bool
+  default     = false
+}
+
+variable "enable_observability" {
+  description = "Enable observability stack (Prometheus, Grafana, Loki, Jaeger). Disable on low-memory VMs for initial deployment."
+  type        = bool
+  default     = false
+}
+
+variable "enable_argocd" {
+  description = "Enable ArgoCD GitOps. Disable for initial deployment."
   type        = bool
   default     = false
 }
