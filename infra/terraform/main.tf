@@ -92,10 +92,3 @@ module "vault_modular" {
   storage_size = var.environment == "prod" ? "10Gi" : "5Gi"
 }
 
-module "backup_modular" {
-  count = var.enable_modular_stack ? 1 : 0
-
-  source    = "./modules/backup"
-  namespace = module.logical_namespaces["data"].name
-  schedule  = "0 2 * * *"
-}
