@@ -1,19 +1,13 @@
 resource "helm_release" "rabbitmq" {
   name       = "rabbitmq"
   namespace  = var.namespace
-  repository = "oci://registry-1.docker.io/bitnamicharts"
+  repository = "https://charts.bitnami.com/bitnami"
   chart      = "rabbitmq"
+  version    = "12.15.0"
   timeout    = 900
   wait       = false
 
   values = [<<-YAML
-    global:
-      security:
-        allowInsecureImages: true
-    image:
-      registry: docker.io
-      repository: rabbitmq
-      tag: 3-management-alpine
     auth:
       username: fieldops
       password: "${var.password}"
