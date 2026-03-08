@@ -8,6 +8,8 @@ resource "helm_release" "minio" {
 
   values = [<<-YAML
     image:
+      registry: docker.io
+      repository: minio/minio
       tag: latest
     auth:
       rootUser: "${var.access_key}"

@@ -8,7 +8,9 @@ resource "helm_release" "rabbitmq" {
 
   values = [<<-YAML
     image:
-      tag: latest
+      registry: docker.io
+      repository: rabbitmq
+      tag: 3-management-alpine
     auth:
       username: fieldops
       password: "${var.password}"
