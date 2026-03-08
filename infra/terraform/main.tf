@@ -75,12 +75,12 @@ module "minio_modular" {
 module "observability_modular" {
   count = var.enable_modular_stack ? 1 : 0
 
-  source                    = "./modules/observability"
-  namespace                 = module.logical_namespaces["observability"].name
-  grafana_password          = var.grafana_password
-  prometheus_storage_size   = "5Gi"
-  loki_storage_size         = "5Gi"
-  enable_traefik_metrics    = true
+  source                  = "./modules/observability"
+  namespace               = module.logical_namespaces["observability"].name
+  grafana_password        = var.grafana_password
+  prometheus_storage_size = "5Gi"
+  loki_storage_size       = "5Gi"
+  enable_traefik_metrics  = true
 }
 
 module "vault_modular" {
