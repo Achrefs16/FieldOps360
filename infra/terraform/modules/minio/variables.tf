@@ -41,8 +41,8 @@ variable "memory_limit" {
 
 variable "chart_version" {
   type        = string
-  description = "Bitnami MinIO chart version"
-  default     = "14.0.0"
+  description = "Bitnami MinIO chart version (leave empty for latest)"
+  default     = null
 }
 
 variable "create_buckets" {

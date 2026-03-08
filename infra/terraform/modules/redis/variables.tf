@@ -35,6 +35,6 @@ variable "memory_limit" {
 
 variable "chart_version" {
   type        = string
-  description = "Bitnami Redis chart version"
-  default     = "19.0.0"
+  description = "Bitnami Redis chart version (leave empty for latest)"
+  default     = null
 }

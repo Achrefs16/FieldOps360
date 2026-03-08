@@ -3,7 +3,6 @@ resource "helm_release" "minio" {
   namespace  = var.namespace
   repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "minio"
-  version    = var.chart_version
   timeout    = 900
   wait       = true
 

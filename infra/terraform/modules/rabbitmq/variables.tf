@@ -35,6 +35,6 @@ variable "memory_limit" {
 
 variable "chart_version" {
   type        = string
-  description = "Bitnami RabbitMQ chart version"
-  default     = "14.0.0"
+  description = "Bitnami RabbitMQ chart version (leave empty for latest)"
+  default     = null
 }

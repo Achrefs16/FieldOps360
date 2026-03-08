@@ -3,7 +3,6 @@ resource "helm_release" "rabbitmq" {
   namespace  = var.namespace
   repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "rabbitmq"
-  version    = var.chart_version
   timeout    = 900
   wait       = true
 

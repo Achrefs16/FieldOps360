@@ -19,5 +19,5 @@ variable "storage_size" {
 
 variable "chart_version" {
   type    = string
-  default = "15.5.0"
+  default = null
 }
