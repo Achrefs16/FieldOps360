@@ -12,4 +12,4 @@ minio_secret_key     = "CHANGE_ME"
 db_storage_size      = "1Gi"
 minio_storage_size   = "2Gi"
 grafana_password     = "CHANGE_ME"
-enable_observability = false
+enable_observability = true

@@ -69,7 +69,7 @@ module "minio_modular" {
   storage_size   = var.minio_storage_size
   access_key     = var.minio_access_key
   secret_key     = var.minio_secret_key
-  create_buckets = false
+  create_buckets = true
 }
 
 module "observability_modular" {

@@ -54,12 +54,12 @@ variable "prometheus_cpu_request" {
 
 variable "prometheus_memory_request" {
   type    = string
-  default = "256Mi"
+  default = "128Mi"
 }
 
 variable "prometheus_memory_limit" {
   type    = string
-  default = "1Gi"
+  default = "512Mi"
 }
 
 # --- Grafana Resources ---
@@ -75,7 +75,7 @@ variable "grafana_memory_request" {
 
 variable "grafana_memory_limit" {
   type    = string
-  default = "512Mi"
+  default = "256Mi"
 }
 
 # --- Loki Resources ---
@@ -96,7 +96,7 @@ variable "loki_memory_request" {
 
 variable "loki_memory_limit" {
   type    = string
-  default = "512Mi"
+  default = "256Mi"
 }
 
 # --- Jaeger Resources ---
@@ -112,7 +112,7 @@ variable "jaeger_memory_request" {
 
 variable "jaeger_memory_limit" {
   type    = string
-  default = "512Mi"
+  default = "256Mi"
 }
 
 # --- Feature Flags ---
