@@ -4,13 +4,13 @@ resource "helm_release" "minio" {
   repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "minio"
   version    = var.chart_version
-  timeout    = 600
+  timeout    = 900
   wait       = true
 
   values = [<<-YAML
     auth:
-      rootUser: ${var.access_key}
-      rootPassword: ${var.secret_key}
+      rootUser: "${var.access_key}"
+      rootPassword: "${var.secret_key}"
     mode: standalone
     persistence:
       storageClass: local-path

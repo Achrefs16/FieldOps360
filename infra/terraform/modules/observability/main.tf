@@ -15,7 +15,7 @@ resource "helm_release" "kube_prometheus" {
     grafana:
       enabled: true
       adminUser: admin
-      adminPassword: ${var.grafana_password}
+      adminPassword: "${var.grafana_password}"
 
       grafana.ini:
         server:

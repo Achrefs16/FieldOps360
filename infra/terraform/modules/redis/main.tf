@@ -4,7 +4,7 @@ resource "helm_release" "redis" {
   repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "redis"
   version    = var.chart_version
-  timeout    = 600
+  timeout    = 900
   wait       = true
 
   values = [<<-YAML

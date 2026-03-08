@@ -10,13 +10,13 @@ resource "helm_release" "vault" {
   values = [<<-YAML
     server:
       ha:
-        enabled: true
+        enabled: ${var.replicas > 1 ? true : false}
         replicas: ${var.replicas}
       dataStorage:
         storageClass: local-path
         size: ${var.storage_size}
       standalone:
-        enabled: false
+        enabled: ${var.replicas > 1 ? false : true}
     ui:
       enabled: true
     injector:
