@@ -8,6 +8,13 @@ resource "helm_release" "rabbitmq" {
   wait       = false
 
   values = [<<-YAML
+    global:
+      security:
+        allowInsecureImages: true
+    image:
+      registry: docker.io
+      repository: rabbitmq
+      tag: 3-management
     auth:
       username: fieldops
       password: "${var.password}"
