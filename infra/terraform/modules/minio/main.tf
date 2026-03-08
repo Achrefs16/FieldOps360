@@ -7,6 +7,9 @@ resource "helm_release" "minio" {
   wait       = true
 
   values = [<<-YAML
+    global:
+      security:
+        allowInsecureImages: true
     image:
       registry: docker.io
       repository: minio/minio

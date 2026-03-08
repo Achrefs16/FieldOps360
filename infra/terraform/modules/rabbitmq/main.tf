@@ -7,6 +7,9 @@ resource "helm_release" "rabbitmq" {
   wait       = false
 
   values = [<<-YAML
+    global:
+      security:
+        allowInsecureImages: true
     image:
       registry: docker.io
       repository: rabbitmq
