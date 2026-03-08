@@ -10,7 +10,7 @@ resource "helm_release" "redis" {
   values = [<<-YAML
     architecture: standalone
     auth:
-      password: ${var.password}
+      password: "${var.password}"
     master:
       persistence:
         storageClass: local-path

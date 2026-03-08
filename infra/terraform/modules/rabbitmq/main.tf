@@ -10,7 +10,7 @@ resource "helm_release" "rabbitmq" {
   values = [<<-YAML
     auth:
       username: fieldops
-      password: ${var.password}
+      password: "${var.password}"
     persistence:
       storageClass: local-path
       size: ${var.storage_size}

@@ -10,8 +10,8 @@ resource "helm_release" "postgresql" {
   values = [<<-YAML
     architecture: standalone
     auth:
-      postgresPassword: ${var.admin_password}
-      database: ${var.database_name}
+      postgresPassword: "${var.admin_password}"
+      database: "${var.database_name}"
     primary:
       extendedConfiguration: |
         wal_level = replica
