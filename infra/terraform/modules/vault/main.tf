@@ -5,7 +5,7 @@ resource "helm_release" "vault" {
   chart      = "vault"
   version    = var.chart_version
   timeout    = 900
-  wait       = true
+  wait       = false
 
   values = [<<-YAML
     server:

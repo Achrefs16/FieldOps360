@@ -4,7 +4,7 @@ resource "helm_release" "postgresql" {
   repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "postgresql"
   timeout    = 900
-  wait       = true
+  wait       = false
 
   values = [<<-YAML
     architecture: standalone

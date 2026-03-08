@@ -4,7 +4,7 @@ resource "helm_release" "rabbitmq" {
   repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "rabbitmq"
   timeout    = 900
-  wait       = true
+  wait       = false
 
   values = [<<-YAML
     auth:

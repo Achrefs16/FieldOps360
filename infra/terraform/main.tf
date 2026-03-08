@@ -69,11 +69,11 @@ module "minio_modular" {
   storage_size   = var.minio_storage_size
   access_key     = var.minio_access_key
   secret_key     = var.minio_secret_key
-  create_buckets = true
+  create_buckets = false
 }
 
 module "observability_modular" {
-  count = var.enable_modular_stack && var.enable_observability ? 1 : 0
+  count = var.enable_observability ? 1 : 0
 
   source                  = "./modules/observability"
   namespace               = module.logical_namespaces["observability"].name

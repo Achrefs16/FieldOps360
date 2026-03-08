@@ -4,7 +4,7 @@ resource "helm_release" "minio" {
   repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "minio"
   timeout    = 900
-  wait       = true
+  wait       = false
 
   values = [<<-YAML
     auth:
