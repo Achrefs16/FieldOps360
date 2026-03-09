@@ -1,13 +1,16 @@
-# Network Policies for FieldOps360 on K3s
-# Apply per namespace: kubectl apply -f . -n fieldops-{env}
+# Network Policies for FieldOps360 on K3s (GitOps-safe)
+# Every manifest has an explicit namespace so ArgoCD can apply it deterministically.
 
-# Allow microservices to receive traffic only from Traefik ingress
+# -----------------------------------------------------------------------------
+# Traefik ingress allow-lists per namespace
+# -----------------------------------------------------------------------------
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-traefik-ingress
+  namespace: fieldops-auth
 spec:
-  podSelector: {} # Allow Traefik to access any pod on permitted ports
+  podSelector: {}
   policyTypes:
     - Ingress
   ingress:
@@ -21,6 +24,25 @@ spec:
       ports:
         - protocol: TCP
           port: 3001
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-traefik-ingress
+  namespace: fieldops-core
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
         - protocol: TCP
           port: 3002
         - protocol: TCP
@@ -29,46 +51,94 @@ spec:
           port: 3004
         - protocol: TCP
           port: 3005
-        - protocol: TCP
-          port: 9001   # MinIO Console
-        - protocol: TCP
-          port: 15672  # RabbitMQ Management
 ---
-# Allow services to connect to databases within same namespace
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-services-to-data
+  name: allow-traefik-ingress
+  namespace: fieldops-data
 spec:
-  podSelector: {} # Apply to all data store pods
+  podSelector: {}
   policyTypes:
     - Ingress
   ingress:
     - from:
-        - podSelector:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 9001
+        - protocol: TCP
+          port: 15672
+        - protocol: TCP
+          port: 8200
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-traefik-ingress
+  namespace: fieldops-observability
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 16686
+---
+# -----------------------------------------------------------------------------
+# Data tier ingress policy
+# -----------------------------------------------------------------------------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-services-to-data
+  namespace: fieldops-data
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
             matchLabels:
               app.kubernetes.io/part-of: fieldops360
       ports:
         - protocol: TCP
-          port: 5432   # PostgreSQL
+          port: 5432
         - protocol: TCP
-          port: 6379   # Redis
+          port: 6379
         - protocol: TCP
-          port: 5672   # RabbitMQ
+          port: 5672
         - protocol: TCP
-          port: 15672  # RabbitMQ Management
+          port: 15672
         - protocol: TCP
-          port: 9000   # MinIO
+          port: 9000
 ---
-# Allow Prometheus to scrape metrics from all services
+# -----------------------------------------------------------------------------
+# Prometheus ingress policy (apply to each workload namespace)
+# -----------------------------------------------------------------------------
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-prometheus-scrape
+  namespace: fieldops-auth
 spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/part-of: fieldops360
+  podSelector: {}
   policyTypes:
     - Ingress
   ingress:
@@ -78,13 +148,156 @@ spec:
               kubernetes.io/metadata.name: fieldops-observability
       ports:
         - protocol: TCP
-          port: 9090   # metrics
+          port: 9090
 ---
-# Deny all other ingress by default
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape
+  namespace: fieldops-core
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: fieldops-observability
+      ports:
+        - protocol: TCP
+          port: 9090
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape
+  namespace: fieldops-reporting
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: fieldops-observability
+      ports:
+        - protocol: TCP
+          port: 9090
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape
+  namespace: fieldops-data
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: fieldops-observability
+      ports:
+        - protocol: TCP
+          port: 9090
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape
+  namespace: fieldops-gateway
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: fieldops-observability
+      ports:
+        - protocol: TCP
+          port: 9090
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-scrape
+  namespace: fieldops-observability
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: fieldops-observability
+      ports:
+        - protocol: TCP
+          port: 9090
+---
+# -----------------------------------------------------------------------------
+# Default deny ingress per namespace
+# -----------------------------------------------------------------------------
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny-ingress
+  namespace: fieldops-auth
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: fieldops-core
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: fieldops-reporting
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: fieldops-data
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: fieldops-gateway
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: fieldops-observability
 spec:
   podSelector: {}
   policyTypes:
