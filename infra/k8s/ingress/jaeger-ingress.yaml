@@ -12,4 +12,4 @@ spec:
       kind: Rule
       services:
         - name: jaeger-query
-          port: 16686
+          port: 80
