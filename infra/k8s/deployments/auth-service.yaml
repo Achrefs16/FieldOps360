@@ -27,8 +27,8 @@ spec:
         vault.hashicorp.com/agent-extra-secret: "vault-approle-auth"
         vault.hashicorp.com/auth-type: "approle"
         vault.hashicorp.com/auth-path: "auth/approle"
-        vault.hashicorp.com/auth-config-role-id-file-path: "/vault/custom/vault-approle-auth/role-id"
-        vault.hashicorp.com/auth-config-secret-id-file-path: "/vault/custom/vault-approle-auth/secret-id"
+        vault.hashicorp.com/auth-config-role-id-file-path: "/vault/custom/role-id"
+        vault.hashicorp.com/auth-config-secret-id-file-path: "/vault/custom/secret-id"
         vault.hashicorp.com/role: "auth-service"
         vault.hashicorp.com/agent-inject-secret-db: "secret/data/postgresql"
         vault.hashicorp.com/agent-inject-template-db: |
