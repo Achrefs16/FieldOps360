@@ -9,6 +9,8 @@ resource "helm_release" "postgresql" {
 
   values = [<<-YAML
     architecture: standalone
+    image:
+      tag: latest
     auth:
       postgresPassword: "${var.admin_password}"
       database: "${var.database_name}"
