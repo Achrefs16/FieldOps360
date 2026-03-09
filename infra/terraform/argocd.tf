@@ -91,8 +91,7 @@ resource "kubernetes_manifest" "argocd_app" {
         group = "apps"
         kind  = "Deployment"
         jsonPointers = [
-          "/spec/template/metadata/annotations/kubectl.kubernetes.io~1restartedAt",
-          "/spec/template/spec/containers/0/image"
+          "/spec/template/metadata/annotations/kubectl.kubernetes.io~1restartedAt"
         ]
       }]
     }

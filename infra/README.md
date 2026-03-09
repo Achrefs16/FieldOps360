@@ -188,12 +188,12 @@ infra/
 │   └── vault-bootstrap.sh       # Vault secrets initialization
 └── terraform/
     ├── main.tf                  # Root module
+    ├── namespace.tf             # Namespace creation
     ├── providers.tf             # K3s provider config
     ├── variables.tf             # Input variables
     ├── outputs.tf               # Outputs
+    ├── backend.tf               # MinIO S3 backend (2-phase setup)
     ├── argocd.tf                # ArgoCD Helm + Application
-    ├── monitoring.tf            # Metrics Server (for HPA)
-    ├── dashboards.tf            # Grafana dashboard ConfigMaps
     ├── sealed_secrets.tf        # Bitnami Sealed Secrets
     ├── dev.tfvars               # Dev variable values
     ├── staging.tfvars           # Staging variable values

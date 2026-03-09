@@ -3,6 +3,7 @@ resource "helm_release" "postgresql" {
   namespace  = var.namespace
   repository = "oci://registry-1.docker.io/bitnamicharts"
   chart      = "postgresql"
+  version    = "13.2.24"
   timeout    = 900
   wait       = false
 

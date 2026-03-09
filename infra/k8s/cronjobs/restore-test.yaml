@@ -29,6 +29,7 @@ spec:
               {{- end -}}
         spec:
           restartPolicy: OnFailure
+          serviceAccountName: default
           containers:
             - name: restore-test
               image: postgres:15-alpine

@@ -29,6 +29,7 @@ spec:
               {{- end -}}
         spec:
           restartPolicy: OnFailure
+          serviceAccountName: default
           containers:
             - name: redis-backup
               image: redis:7-alpine

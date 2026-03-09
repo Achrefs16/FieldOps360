@@ -52,8 +52,8 @@ spec:
       automountServiceAccountToken: true  # Required for Vault auth
       containers:
         - name: auth-service
-          image: achrefs161/fieldops-auth-service:latest
-          imagePullPolicy: Always
+          image: achrefs161/fieldops-auth-service:v1.0.0
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3001
               protocol: TCP
