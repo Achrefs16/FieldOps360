@@ -29,6 +29,30 @@ resource "helm_release" "rabbitmq" {
         memory: ${var.memory_limit}
     service:
       type: ClusterIP
+    readinessProbe:
+      enabled: true
+      failureThreshold: 6
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 5
+      exec:
+        command:
+          - /bin/bash
+          - -ec
+          - rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_local_alarms
+    livenessProbe:
+      enabled: true
+      failureThreshold: 6
+      initialDelaySeconds: 120
+      periodSeconds: 30
+      successThreshold: 1
+      timeoutSeconds: 20
+      exec:
+        command:
+          - /bin/bash
+          - -ec
+          - rabbitmq-diagnostics -q ping
   YAML
   ]
 }

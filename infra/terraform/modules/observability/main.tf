@@ -68,6 +68,8 @@ resource "helm_release" "kube_prometheus" {
 
     nodeExporter:
       enabled: true
+      hostNetwork: false
+      hostPID: false
 
     kubeStateMetrics:
       enabled: true
