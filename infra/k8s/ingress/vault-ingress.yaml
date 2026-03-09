@@ -1,0 +1,16 @@
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: vault-ui
+  namespace: fieldops-data
+spec:
+  entryPoints:
+    - websecure
+  tls: {}
+  routes:
+    - match: Host(`vault.fieldops.local`)
+      kind: Rule
+      services:
+        - name: vault-ui
+          port: 8200
