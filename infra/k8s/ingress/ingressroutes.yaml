@@ -2,7 +2,7 @@ apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: fieldops-api-gateway
-  namespace: fieldops-gateway
+  namespace: fieldops-auth
 spec:
   entryPoints:
     - websecure
@@ -15,16 +15,10 @@ spec:
       kind: Rule
       middlewares:
         - name: rate-limit-auth
-          namespace: fieldops-gateway
         - name: security-headers
-          namespace: fieldops-gateway
         - name: compress
-          namespace: fieldops-gateway
         - name: retry-auth
-          namespace: fieldops-gateway
         - name: circuit-breaker-auth
-          namespace: fieldops-gateway
       services:
         - name: auth-service
           port: 3001
-          namespace: fieldops-auth
