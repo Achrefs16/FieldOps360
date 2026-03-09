@@ -6,6 +6,8 @@ resource "helm_release" "rabbitmq" {
   version    = "12.15.0"
   timeout    = 900
   wait       = false
+  force_update   = true
+  recreate_pods  = true
 
   values = [<<-YAML
     global:
