@@ -8,7 +8,7 @@ spec:
     - websecure
   tls: {}
   routes:
-    - match: PathPrefix(`/grafana`)
+    - match: Host(`grafana.fieldops.local`)
       kind: Rule
       services:
         - name: kube-prometheus-grafana
