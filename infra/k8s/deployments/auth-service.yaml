@@ -67,6 +67,7 @@ spec:
               source /vault/secrets/redis
               source /vault/secrets/minio
               source /vault/secrets/smtp
+              export PLATFORM_DATABASE_URL="postgresql://postgres:${DB_PASSWORD}@postgresql.fieldops-data.svc.cluster.local:5432/fieldops_platform"
               exec node dist/main
           
           envFrom:
@@ -74,9 +75,6 @@ spec:
                 name: auth-service-config
           
           env:
-            # Platform database URL (password injected from Vault)
-            - name: PLATFORM_DATABASE_URL
-              value: "postgresql://postgres:$(DB_PASSWORD)@postgresql.fieldops-data.svc.cluster.local:5432/fieldops_platform"
             
             # JWT keys (from K8s secret volume)
             - name: JWT_PRIVATE_KEY_PATH
