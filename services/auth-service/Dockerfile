@@ -14,7 +14,7 @@ RUN npm ci --only=production && \
 # -----------------------------------------------------------------
 FROM node:20-alpine AS builder
 
-RUN apk add --no-cache openssl
+RUN apk upgrade --no-cache && apk add --no-cache openssl
 
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -32,7 +32,7 @@ RUN npm run build
 # -----------------------------------------------------------------
 FROM node:20-alpine AS runner
 
-RUN apk add --no-cache openssl
+RUN apk upgrade --no-cache && apk add --no-cache openssl
 
 # Remove package managers - not needed at runtime, and they carry
 # their own vulnerable transitive deps (cross-spawn, glob, etc.)
