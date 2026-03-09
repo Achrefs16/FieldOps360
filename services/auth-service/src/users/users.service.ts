@@ -8,11 +8,14 @@ import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { AuditLogService } from '../common/audit/audit-log.service';
 
 const SALT_ROUNDS = 10;
 
 @Injectable()
 export class UsersService {
+    constructor(private readonly auditLogService: AuditLogService) { }
+
     /**
      * List all users for the current tenant with pagination and filtering.
      */
@@ -112,6 +115,14 @@ export class UsersService {
             data: createData,
         });
 
+        await this.auditLogService.log(req, {
+            userId: actorId,
+            action: 'USER_CREATED',
+            resource: 'users',
+            resourceId: user.id,
+            metadata: { role: user.role },
+        });
+
         return {
             id: user.id,
             email: user.email,
@@ -195,6 +206,13 @@ export class UsersService {
             data: updateData,
         });
 
+        await this.auditLogService.log(req, {
+            userId: actorId,
+            action: 'USER_UPDATED',
+            resource: 'users',
+            resourceId: user.id,
+        });
+
         return this.formatUser(user);
     }
 
@@ -208,6 +226,14 @@ export class UsersService {
         const user = await req.tenantDb.user.update({
             where: { id },
             data: statusData,
+        });
+
+        await this.auditLogService.log(req, {
+            userId: actorId,
+            action: active ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
+            resource: 'users',
+            resourceId: user.id,
+            metadata: { active },
         });
 
         return this.formatUser(user);

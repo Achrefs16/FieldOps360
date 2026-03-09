@@ -14,6 +14,9 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SsoLoginDto } from './dto/sso-login.dto';
+import { MfaEnableDto } from './dto/mfa-enable.dto';
+import { MfaVerifyDto } from './dto/mfa-verify.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { TenantRequest } from '../common/middleware/tenant.middleware';
@@ -77,6 +80,50 @@ export class AuthController {
         @Body() dto: ResetPasswordDto,
     ) {
         return this.authService.resetPassword(req, dto);
+    }
+
+    @Post('sso/google')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'SSO login with Google', description: 'Authenticate using a Google OAuth access token.' })
+    @ApiResponse({ status: 200, description: 'Login successful via Google SSO.' })
+    async ssoGoogle(@Req() req: TenantRequest, @Body() dto: SsoLoginDto) {
+        return this.authService.ssoLogin(req, 'google', dto.access_token);
+    }
+
+    @Post('sso/microsoft')
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'SSO login with Microsoft', description: 'Authenticate using a Microsoft OAuth access token.' })
+    @ApiResponse({ status: 200, description: 'Login successful via Microsoft SSO.' })
+    async ssoMicrosoft(@Req() req: TenantRequest, @Body() dto: SsoLoginDto) {
+        return this.authService.ssoLogin(req, 'microsoft', dto.access_token);
+    }
+
+    @Post('mfa/enable')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    @ApiBearerAuth('JWT')
+    @ApiOperation({ summary: 'Enable MFA', description: 'Generate TOTP secret and QR code for authenticator enrollment.' })
+    @ApiResponse({ status: 200, description: 'MFA enrollment challenge generated.' })
+    async enableMfa(
+        @Req() req: TenantRequest,
+        @CurrentUser() user: JwtPayload,
+        @Body() dto: MfaEnableDto,
+    ) {
+        return this.authService.enableMfa(req, user.sub, dto.current_password);
+    }
+
+    @Post('mfa/verify')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    @ApiBearerAuth('JWT')
+    @ApiOperation({ summary: 'Verify MFA', description: 'Verify TOTP code and activate MFA on account.' })
+    @ApiResponse({ status: 200, description: 'MFA enabled successfully.' })
+    async verifyMfa(
+        @Req() req: TenantRequest,
+        @CurrentUser() user: JwtPayload,
+        @Body() dto: MfaVerifyDto,
+    ) {
+        return this.authService.verifyMfa(req, user.sub, dto.code);
     }
 
     @Get('validate')

@@ -18,6 +18,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { resolvePermissions } from '../common/auth/permissions';
 import { TokenBlacklistService } from '../common/security/token-blacklist.service';
+import { AuditLogService } from '../common/audit/audit-log.service';
 
 const SALT_ROUNDS = 10;
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -30,6 +31,7 @@ export class AuthService {
     constructor(
         private readonly jwtService: JwtService,
         private readonly tokenBlacklistService: TokenBlacklistService,
+        private readonly auditLogService: AuditLogService,
     ) {
         // Initialize email transporter (Mailtrap for development)
         this.transporter = nodemailer.createTransport({
@@ -102,6 +104,14 @@ export class AuthService {
                 data: updateData,
             });
 
+            await this.auditLogService.log(req, {
+                userId: user.id,
+                action: 'AUTH_LOGIN_FAILED',
+                resource: 'auth',
+                resourceId: user.id,
+                metadata: { email: dto.email, attempts },
+            });
+
             throw new UnauthorizedException({
                 code: 'INVALID_CREDENTIALS',
                 message: 'Email ou mot de passe incorrect',
@@ -135,6 +145,14 @@ export class AuthService {
         };
 
         const accessToken = this.jwtService.sign(payload);
+
+        await this.auditLogService.log(req, {
+            userId: user.id,
+            action: 'AUTH_LOGIN_SUCCESS',
+            resource: 'auth',
+            resourceId: user.id,
+            metadata: { role: user.role },
+        });
 
         return {
             access_token: accessToken,
@@ -221,6 +239,14 @@ export class AuthService {
             const ttl = Math.max(0, jwtPayload.exp - now);
             await this.tokenBlacklistService.blacklist(jwtPayload.jti, ttl);
         }
+
+        await this.auditLogService.log(req, {
+            userId,
+            action: 'AUTH_LOGOUT',
+            resource: 'auth',
+            resourceId: userId,
+            metadata: { jti: jwtPayload?.jti ?? null },
+        });
     }
 
     /**
@@ -326,7 +352,238 @@ export class AuthService {
             },
         });
 
+        await this.auditLogService.log(req, {
+            userId: matchedUser.id,
+            action: 'AUTH_PASSWORD_RESET',
+            resource: 'users',
+            resourceId: matchedUser.id,
+        });
+
         return { message: 'Mot de passe reinitialise avec succes' };
+    }
+
+    async ssoLogin(req: TenantRequest, provider: 'google' | 'microsoft', accessToken: string) {
+        const profile = await this.fetchSsoProfile(provider, accessToken);
+        if (!profile.email) {
+            throw new UnauthorizedException({
+                code: 'SSO_EMAIL_MISSING',
+                message: 'Le fournisseur SSO n\'a pas retourne d\'email.',
+            });
+        }
+
+        let user = await req.tenantDb.user.findUnique({ where: { email: profile.email } });
+
+        if (!user) {
+            const randomPassword = await bcrypt.hash(this.generateRefreshToken(), SALT_ROUNDS);
+            const createData: any = {
+                email: profile.email,
+                passwordHash: randomPassword,
+                firstName: profile.firstName || 'SSO',
+                lastName: profile.lastName || 'User',
+                role: 'TEAM_MEMBER',
+                active: true,
+                firstLogin: false,
+                createdBy: null,
+                updatedBy: null,
+                metadata: {
+                    sso_provider: provider,
+                    sso_subject: profile.subject,
+                },
+            };
+            user = await req.tenantDb.user.create({ data: createData });
+        }
+
+        if (!user.active || user.deletedAt) {
+            throw new ForbiddenException({
+                code: 'ACCOUNT_DISABLED',
+                message: 'Compte desactive',
+            });
+        }
+
+        const refreshToken = this.generateRefreshToken();
+        const hashedRefreshToken = await bcrypt.hash(refreshToken, SALT_ROUNDS);
+
+        await req.tenantDb.user.update({
+            where: { id: user.id },
+            data: {
+                lastLoginAt: new Date(),
+                refreshToken: hashedRefreshToken,
+                updatedBy: user.id,
+            },
+        });
+
+        const payload: JwtPayload = {
+            sub: user.id,
+            email: user.email,
+            role: user.role,
+            permissions: resolvePermissions(user.role),
+            jti: uuidv4(),
+            tenantId: req.tenantId,
+            tenantSubdomain: req.tenantSubdomain,
+        };
+
+        await this.auditLogService.log(req, {
+            userId: user.id,
+            action: 'AUTH_SSO_LOGIN',
+            resource: 'auth',
+            resourceId: user.id,
+            metadata: { provider },
+        });
+
+        return {
+            access_token: this.jwtService.sign(payload),
+            refresh_token: refreshToken,
+            token_type: 'Bearer',
+            expires_in: Number.parseInt(process.env.JWT_ACCESS_EXPIRY || '900'),
+            user: {
+                id: user.id,
+                email: user.email,
+                first_name: user.firstName,
+                last_name: user.lastName,
+                role: user.role,
+                avatar_url: user.avatarUrl,
+            },
+        };
+    }
+
+    async enableMfa(req: TenantRequest, userId: string, currentPassword: string) {
+        const user = await req.tenantDb.user.findFirst({ where: { id: userId, deletedAt: null } });
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        const validPassword = await bcrypt.compare(currentPassword, user.passwordHash);
+        if (!validPassword) {
+            throw new UnauthorizedException({
+                code: 'INVALID_PASSWORD',
+                message: 'Mot de passe actuel incorrect',
+            });
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const speakeasy = require('speakeasy');
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const QRCode = require('qrcode');
+
+        const secret = speakeasy.generateSecret({
+            name: `FieldOps360 (${req.tenantSubdomain})`,
+            issuer: 'FieldOps360',
+            length: 20,
+        });
+
+        const metadata = (user.metadata && typeof user.metadata === 'object' ? user.metadata : {}) as Record<string, unknown>;
+        metadata.mfa = {
+            enabled: false,
+            secret: secret.base32,
+            pending: true,
+        };
+
+        const updateData: any = { metadata, updatedBy: userId };
+        await req.tenantDb.user.update({ where: { id: userId }, data: updateData });
+
+        const qrCodeDataUrl = await QRCode.toDataURL(secret.otpauth_url);
+
+        await this.auditLogService.log(req, {
+            userId,
+            action: 'AUTH_MFA_ENABLE_CHALLENGE',
+            resource: 'users',
+            resourceId: userId,
+        });
+
+        return {
+            message: 'MFA challenge generated',
+            secret: secret.base32,
+            qr_code: qrCodeDataUrl,
+        };
+    }
+
+    async verifyMfa(req: TenantRequest, userId: string, code: string) {
+        const user = await req.tenantDb.user.findFirst({ where: { id: userId, deletedAt: null } });
+        if (!user) {
+            throw new UnauthorizedException('User not found');
+        }
+
+        const metadata = (user.metadata && typeof user.metadata === 'object' ? user.metadata : {}) as Record<string, any>;
+        const mfa = metadata.mfa;
+        if (!mfa?.secret) {
+            throw new BadRequestException({
+                code: 'MFA_NOT_INITIALIZED',
+                message: 'MFA is not initialized for this account.',
+            });
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const speakeasy = require('speakeasy');
+        const verified = speakeasy.totp.verify({
+            secret: mfa.secret,
+            encoding: 'base32',
+            token: code,
+            window: 1,
+        });
+
+        if (!verified) {
+            throw new UnauthorizedException({
+                code: 'MFA_INVALID_CODE',
+                message: 'Invalid MFA code.',
+            });
+        }
+
+        metadata.mfa = {
+            ...mfa,
+            enabled: true,
+            pending: false,
+            verifiedAt: new Date().toISOString(),
+        };
+
+        const updateData: any = { metadata, updatedBy: userId };
+        await req.tenantDb.user.update({ where: { id: userId }, data: updateData });
+
+        await this.auditLogService.log(req, {
+            userId,
+            action: 'AUTH_MFA_ENABLED',
+            resource: 'users',
+            resourceId: userId,
+        });
+
+        return { message: 'MFA enabled successfully' };
+    }
+
+    private async fetchSsoProfile(provider: 'google' | 'microsoft', accessToken: string) {
+        const endpoint =
+            provider === 'google'
+                ? 'https://www.googleapis.com/oauth2/v3/userinfo'
+                : 'https://graph.microsoft.com/v1.0/me';
+
+        const response = await fetch(endpoint, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            },
+        });
+
+        if (!response.ok) {
+            throw new UnauthorizedException({
+                code: 'SSO_TOKEN_INVALID',
+                message: 'Invalid SSO access token.',
+            });
+        }
+
+        const data: any = await response.json();
+
+        if (provider === 'google') {
+            return {
+                subject: data.sub,
+                email: data.email,
+                firstName: data.given_name,
+                lastName: data.family_name,
+            };
+        }
+
+        return {
+            subject: data.id,
+            email: data.mail || data.userPrincipalName,
+            firstName: data.givenName,
+            lastName: data.surname,
+        };
     }
 
     /**

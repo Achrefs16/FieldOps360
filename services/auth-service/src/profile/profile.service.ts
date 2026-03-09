@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { AuditLogService } from '../common/audit/audit-log.service';
 
 const SALT_ROUNDS = 10;
 const AVATAR_BUCKET = process.env.MINIO_BUCKET || 'avatars';
@@ -19,7 +20,7 @@ const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
 export class ProfileService {
     private readonly minioClient: Minio.Client;
 
-    constructor() {
+    constructor(private readonly auditLogService: AuditLogService) {
         this.minioClient = new Minio.Client({
             endPoint: process.env.MINIO_ENDPOINT || 'localhost',
             port: Number.parseInt(process.env.MINIO_PORT || '9000'),
@@ -64,6 +65,13 @@ export class ProfileService {
             },
         });
 
+        await this.auditLogService.log(req, {
+            userId,
+            action: 'PROFILE_UPDATED',
+            resource: 'users',
+            resourceId: userId,
+        });
+
         return this.formatProfile(user);
     }
 
@@ -105,6 +113,13 @@ export class ProfileService {
                 firstLogin: false,
                 updatedBy: userId,
             },
+        });
+
+        await this.auditLogService.log(req, {
+            userId,
+            action: 'PASSWORD_CHANGED',
+            resource: 'users',
+            resourceId: userId,
         });
 
         return { message: 'Mot de passe modifie avec succes' };
@@ -157,6 +172,14 @@ export class ProfileService {
         await req.tenantDb.user.update({
             where: { id: userId },
             data: { avatarUrl, updatedBy: userId },
+        });
+
+        await this.auditLogService.log(req, {
+            userId,
+            action: 'AVATAR_UPLOADED',
+            resource: 'users',
+            resourceId: userId,
+            metadata: { objectName },
         });
 
         return { avatar_url: avatarUrl };

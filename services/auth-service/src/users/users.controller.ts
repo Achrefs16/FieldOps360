@@ -19,7 +19,9 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { PermissionsGuard } from '../common/guards/permissions.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { Permissions } from '../common/decorators/permissions.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { TenantRequest } from '../common/middleware/tenant.middleware';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -28,12 +30,13 @@ import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 @ApiBearerAuth('JWT')
 @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant subdomain', required: true })
 @Controller('v1/users')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }
 
     @Get()
     @Roles('MANAGER', 'PROJECT_MANAGER')
+    @Permissions('project:read')
     @ApiOperation({ summary: 'List users', description: 'Get a paginated list of users with optional filtering by role, active status, and search term.' })
     @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
     @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 20)' })
@@ -55,6 +58,7 @@ export class UsersController {
 
     @Post()
     @Roles('MANAGER')
+    @Permissions('admin:users')
     @HttpCode(HttpStatus.CREATED)
     @ApiOperation({ summary: 'Create user', description: 'Create a new user in the tenant. Password must contain uppercase, lowercase, number, and special character.' })
     @ApiResponse({ status: 201, description: 'User created successfully.' })
@@ -69,6 +73,7 @@ export class UsersController {
 
     @Get(':id')
     @Roles('MANAGER', 'PROJECT_MANAGER')
+    @Permissions('project:read')
     @ApiOperation({ summary: 'Get user by ID', description: 'Get the full profile of a specific user.' })
     @ApiParam({ name: 'id', description: 'User UUID' })
     @ApiResponse({ status: 200, description: 'User details.' })
@@ -79,6 +84,7 @@ export class UsersController {
 
     @Put(':id')
     @Roles('MANAGER')
+    @Permissions('admin:users')
     @ApiOperation({ summary: 'Update user', description: 'Update user information. Only specified fields are modified.' })
     @ApiParam({ name: 'id', description: 'User UUID' })
     @ApiResponse({ status: 200, description: 'User updated.' })
@@ -95,6 +101,7 @@ export class UsersController {
 
     @Patch(':id/status')
     @Roles('MANAGER')
+    @Permissions('admin:users')
     @ApiOperation({ summary: 'Toggle user status', description: 'Activate or deactivate a user account.' })
     @ApiParam({ name: 'id', description: 'User UUID' })
     @ApiResponse({ status: 200, description: 'User status updated.' })
