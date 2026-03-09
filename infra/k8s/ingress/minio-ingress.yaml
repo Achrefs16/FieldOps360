@@ -12,5 +12,5 @@ spec:
     - match: Host(`minio.fieldops.local`)
       kind: Rule
       services:
-        - name: minio
+        - name: minio-console
           port: 9001
