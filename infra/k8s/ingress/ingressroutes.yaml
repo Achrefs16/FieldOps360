@@ -15,15 +15,15 @@ spec:
       kind: Rule
       middlewares:
         - name: rate-limit-auth
-          namespace: fieldops-auth
+          namespace: fieldops-gateway
         - name: security-headers
-          namespace: fieldops-auth
+          namespace: fieldops-gateway
         - name: compress
-          namespace: fieldops-auth
+          namespace: fieldops-gateway
         - name: retry-auth
-          namespace: fieldops-auth
+          namespace: fieldops-gateway
         - name: circuit-breaker-auth
-          namespace: fieldops-auth
+          namespace: fieldops-gateway
       services:
         - name: auth-service
           port: 3001
