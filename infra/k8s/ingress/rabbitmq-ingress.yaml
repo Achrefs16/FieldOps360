@@ -1,5 +1,15 @@
 ---
 apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: rabbitmq-stripprefix
+  namespace: fieldops-data
+spec:
+  stripPrefix:
+    prefixes:
+      - /rabbitmq
+---
+apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: rabbitmq-management
@@ -11,6 +21,8 @@ spec:
   routes:
     - match: PathPrefix(`/rabbitmq`)
       kind: Rule
+      middlewares:
+        - name: rabbitmq-stripprefix
       services:
         - name: rabbitmq
           port: 15672

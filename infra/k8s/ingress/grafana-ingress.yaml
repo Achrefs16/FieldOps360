@@ -13,4 +13,3 @@ spec:
       services:
         - name: kube-prometheus-grafana
           port: 80
-          namespace: fieldops-observability
