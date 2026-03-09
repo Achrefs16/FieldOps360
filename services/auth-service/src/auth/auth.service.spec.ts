@@ -2,14 +2,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException, ForbiddenException, HttpException, BadRequestException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import * as crypto from 'crypto';
+import * as crypto from 'node:crypto';
 import * as nodemailer from 'nodemailer';
 import { AuthService } from './auth.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
+import { TokenBlacklistService } from '../common/security/token-blacklist.service';
+import { AuditLogService } from '../common/audit/audit-log.service';
 
 // Mock dependencies
 jest.mock('bcryptjs');
-jest.mock('crypto');
+jest.mock('node:crypto');
 jest.mock('nodemailer');
 
 describe('AuthService', () => {
@@ -40,11 +42,21 @@ describe('AuthService', () => {
         sendMail: jest.fn().mockResolvedValue(true),
     };
 
+    const mockTokenBlacklistService = {
+        blacklist: jest.fn().mockResolvedValue(undefined),
+        isBlacklisted: jest.fn().mockResolvedValue(false),
+    };
+
+    const mockAuditLogService = {
+        log: jest.fn().mockResolvedValue(undefined),
+    };
+
     beforeAll(() => {
         (nodemailer.createTransport as jest.Mock).mockReturnValue(mockTransporter);
         (crypto.randomBytes as jest.Mock).mockReturnValue({
             toString: () => 'random-bytes-token',
         });
+        (crypto.randomUUID as jest.Mock).mockReturnValue('mock-jti');
     });
 
     beforeEach(async () => {
@@ -54,6 +66,14 @@ describe('AuthService', () => {
                 {
                     provide: JwtService,
                     useValue: mockJwtService,
+                },
+                {
+                    provide: TokenBlacklistService,
+                    useValue: mockTokenBlacklistService,
+                },
+                {
+                    provide: AuditLogService,
+                    useValue: mockAuditLogService,
                 },
             ],
         }).compile();
@@ -155,7 +175,7 @@ describe('AuthService', () => {
             expect(result).toHaveProperty('access_token', 'mock-jwt-token');
             expect(result).toHaveProperty('refresh_token', 'random-bytes-token');
             expect(mockTenantDbUser.update).toHaveBeenCalledWith(
-                expect.objectContaining({ data: { refreshToken: 'hashed-new-token' } })
+                expect.objectContaining({ data: { refreshToken: 'hashed-new-token', updatedBy: 'u1' } })
             );
         });
     });

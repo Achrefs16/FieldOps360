@@ -17,7 +17,15 @@ describe('JwtStrategy', () => {
     });
 
     it('should validate and return payload', () => {
-        const payload: JwtPayload = { sub: 'u1', role: 'ADMIN', email: 'e', tenantId: 't', tenantSubdomain: 'd' };
+        const payload: JwtPayload = {
+            sub: 'u1',
+            role: 'ADMIN',
+            email: 'e',
+            permissions: ['admin:users'],
+            jti: 'jti-1',
+            tenantId: 't',
+            tenantSubdomain: 'd',
+        };
         expect(strategy.validate(payload)).toEqual(payload);
     });
 

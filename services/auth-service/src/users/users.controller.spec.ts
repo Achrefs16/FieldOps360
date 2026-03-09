@@ -17,6 +17,7 @@ describe('UsersController', () => {
     };
 
     const mockReq = {} as TenantRequest;
+    const mockUser = { sub: 'actor-1' } as any;
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
@@ -47,8 +48,8 @@ describe('UsersController', () => {
     it('should create', async () => {
         const dto: any = { email: 'test@demo.com' };
         mockUsersService.create.mockResolvedValue({ id: '1' });
-        const result = await controller.create(mockReq, dto);
-        expect(usersService.create).toHaveBeenCalledWith(mockReq, dto);
+        const result = await controller.create(mockReq, mockUser, dto);
+        expect(usersService.create).toHaveBeenCalledWith(mockReq, dto, 'actor-1');
         expect(result).toEqual({ id: '1' });
     });
 
@@ -61,13 +62,13 @@ describe('UsersController', () => {
     it('should update', async () => {
         const dto: any = { first_name: 'test' };
         mockUsersService.update.mockResolvedValue({ id: '1' });
-        await controller.update(mockReq, '1', dto);
-        expect(usersService.update).toHaveBeenCalledWith(mockReq, '1', dto);
+        await controller.update(mockReq, mockUser, '1', dto);
+        expect(usersService.update).toHaveBeenCalledWith(mockReq, '1', dto, 'actor-1');
     });
 
     it('should updateStatus', async () => {
         mockUsersService.updateStatus.mockResolvedValue({ id: '1', active: false });
-        await controller.updateStatus(mockReq, '1', false);
-        expect(usersService.updateStatus).toHaveBeenCalledWith(mockReq, '1', false);
+        await controller.updateStatus(mockReq, mockUser, '1', false);
+        expect(usersService.updateStatus).toHaveBeenCalledWith(mockReq, '1', false, 'actor-1');
     });
 });

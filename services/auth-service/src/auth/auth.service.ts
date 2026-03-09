@@ -10,7 +10,6 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'node:crypto';
 import * as nodemailer from 'nodemailer';
-import { v4 as uuidv4 } from 'uuid';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { LoginDto } from './dto/login.dto';
@@ -139,7 +138,7 @@ export class AuthService {
             email: user.email,
             role: user.role,
             permissions: resolvePermissions(user.role),
-            jti: uuidv4(),
+            jti: crypto.randomUUID(),
             tenantId: req.tenantId,
             tenantSubdomain: req.tenantSubdomain,
         };
@@ -213,7 +212,7 @@ export class AuthService {
             email: matchedUser.email,
             role: matchedUser.role,
             permissions: resolvePermissions(matchedUser.role),
-            jti: uuidv4(),
+            jti: crypto.randomUUID(),
             tenantId: req.tenantId,
             tenantSubdomain: req.tenantSubdomain,
         };
@@ -417,7 +416,7 @@ export class AuthService {
             email: user.email,
             role: user.role,
             permissions: resolvePermissions(user.role),
-            jti: uuidv4(),
+            jti: crypto.randomUUID(),
             tenantId: req.tenantId,
             tenantSubdomain: req.tenantSubdomain,
         };

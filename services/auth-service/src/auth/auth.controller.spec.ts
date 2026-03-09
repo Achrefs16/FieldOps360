@@ -56,7 +56,7 @@ describe('AuthController', () => {
     it('should logout', async () => {
         const user = { sub: 'u1' } as JwtPayload;
         await controller.logout(mockReq, user);
-        expect(authService.logout).toHaveBeenCalledWith(mockReq, 'u1');
+        expect(authService.logout).toHaveBeenCalledWith(mockReq, 'u1', user);
     });
 
     it('should forgot password', async () => {

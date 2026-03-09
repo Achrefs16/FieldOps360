@@ -3,6 +3,7 @@ import { ProfileService } from './profile.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { NotFoundException, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import { AuditLogService } from '../common/audit/audit-log.service';
 
 jest.mock('bcryptjs');
 
@@ -19,7 +20,7 @@ describe('ProfileService', () => {
     let service: ProfileService;
 
     const mockTenantDbUser = {
-        findUnique: jest.fn(),
+        findFirst: jest.fn(),
         update: jest.fn(),
     };
 
@@ -38,9 +39,19 @@ describe('ProfileService', () => {
         passwordHash: 'hashed-pw',
     };
 
+    const mockAuditLogService = {
+        log: jest.fn().mockResolvedValue(undefined),
+    };
+
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
-            providers: [ProfileService],
+            providers: [
+                ProfileService,
+                {
+                    provide: AuditLogService,
+                    useValue: mockAuditLogService,
+                },
+            ],
         }).compile();
 
         service = module.get<ProfileService>(ProfileService);
@@ -53,12 +64,12 @@ describe('ProfileService', () => {
 
     describe('getProfile', () => {
         it('should throw NotFoundException if user not found', async () => {
-            mockTenantDbUser.findUnique.mockResolvedValue(null);
+            mockTenantDbUser.findFirst.mockResolvedValue(null);
             await expect(service.getProfile(mockReq, 'invalid-id')).rejects.toThrow(NotFoundException);
         });
 
         it('should format profile if user found', async () => {
-            mockTenantDbUser.findUnique.mockResolvedValue(dummyUser);
+            mockTenantDbUser.findFirst.mockResolvedValue(dummyUser);
             const res = await service.getProfile(mockReq, 'u1');
             expect(res).toHaveProperty('id', 'u1');
             expect(res).toHaveProperty('first_name', 'John');
@@ -91,7 +102,7 @@ describe('ProfileService', () => {
         });
 
         it('should throw NotFoundException if user not found', async () => {
-            mockTenantDbUser.findUnique.mockResolvedValue(null);
+            mockTenantDbUser.findFirst.mockResolvedValue(null);
             await expect(
                 service.changePassword(mockReq, 'u1', {
                     current_password: 'pw',
@@ -102,7 +113,7 @@ describe('ProfileService', () => {
         });
 
         it('should throw UnauthorizedException if current password is wrong', async () => {
-            mockTenantDbUser.findUnique.mockResolvedValue(dummyUser);
+            mockTenantDbUser.findFirst.mockResolvedValue(dummyUser);
             (bcrypt.compare as jest.Mock).mockResolvedValue(false);
             await expect(
                 service.changePassword(mockReq, 'u1', {
@@ -114,7 +125,7 @@ describe('ProfileService', () => {
         });
 
         it('should change password on success', async () => {
-            mockTenantDbUser.findUnique.mockResolvedValue(dummyUser);
+            mockTenantDbUser.findFirst.mockResolvedValue(dummyUser);
             (bcrypt.compare as jest.Mock).mockResolvedValue(true);
             (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-new');
             const res = await service.changePassword(mockReq, 'u1', {
@@ -125,7 +136,7 @@ describe('ProfileService', () => {
             expect(res.message).toEqual('Mot de passe modifie avec succes');
             expect(mockTenantDbUser.update).toHaveBeenCalledWith(
                 expect.objectContaining({
-                    data: { passwordHash: 'hashed-new', firstLogin: false },
+                    data: { passwordHash: 'hashed-new', firstLogin: false, updatedBy: 'u1' },
                 })
             );
         });

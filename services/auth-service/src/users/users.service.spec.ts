@@ -3,6 +3,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from './users.service';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
+import { AuditLogService } from '../common/audit/audit-log.service';
 
 jest.mock('bcryptjs');
 
@@ -26,6 +27,10 @@ describe('UsersService', () => {
         },
     } as unknown as TenantRequest;
 
+    const mockAuditLogService = {
+        log: jest.fn().mockResolvedValue(undefined),
+    };
+
     // Reusable dummy user that matches Prisma schema output
     const dummyUser = {
         id: 'u1',
@@ -48,7 +53,13 @@ describe('UsersService', () => {
 
     beforeEach(async () => {
         const module: TestingModule = await Test.createTestingModule({
-            providers: [UsersService],
+            providers: [
+                UsersService,
+                {
+                    provide: AuditLogService,
+                    useValue: mockAuditLogService,
+                },
+            ],
         }).compile();
 
         usersService = module.get<UsersService>(UsersService);
@@ -110,7 +121,7 @@ describe('UsersService', () => {
         it('should throw ConflictException if email exists', async () => {
             mockTenantDbUser.findUnique.mockResolvedValue(dummyUser);
 
-            await expect(usersService.create(mockReq, createDto)).rejects.toThrow(ConflictException);
+            await expect(usersService.create(mockReq, createDto, 'actor-1')).rejects.toThrow(ConflictException);
         });
 
         it('should hash password and create user', async () => {
@@ -126,7 +137,7 @@ describe('UsersService', () => {
                 firstLogin: true,
             });
 
-            const result = await usersService.create(mockReq, createDto);
+            const result = await usersService.create(mockReq, createDto, 'actor-1');
 
             expect(bcrypt.hash).toHaveBeenCalledWith('Password@123', 10);
             expect(mockTenantDbUser.create).toHaveBeenCalledWith(
@@ -141,17 +152,20 @@ describe('UsersService', () => {
 
     describe('findOne', () => {
         it('should throw NotFoundException if user not found', async () => {
-            mockTenantDbUser.findUnique.mockResolvedValue(null);
+            mockTenantDbUser.findFirst.mockResolvedValue(null);
 
             await expect(usersService.findOne(mockReq, 'invalid-id')).rejects.toThrow(NotFoundException);
         });
 
         it('should return formatted user if found', async () => {
-            mockTenantDbUser.findUnique.mockResolvedValue(dummyUser);
+            mockTenantDbUser.findFirst.mockResolvedValue(dummyUser);
 
             const result = await usersService.findOne(mockReq, 'u1');
 
-            expect(mockTenantDbUser.findUnique).toHaveBeenCalledWith({ where: { id: 'u1' }, select: expect.any(Object) });
+            expect(mockTenantDbUser.findFirst).toHaveBeenCalledWith({
+                where: { id: 'u1', deletedAt: null },
+                select: expect.any(Object),
+            });
             expect(result).toHaveProperty('first_name', 'John');
             expect(result).toHaveProperty('timezone', 'UTC');
         });
@@ -159,18 +173,20 @@ describe('UsersService', () => {
 
     describe('update', () => {
         it('should prevent updating email to an existing one', async () => {
-            mockTenantDbUser.findUnique.mockResolvedValue(dummyUser); // findOne succeeds
-            mockTenantDbUser.findFirst.mockResolvedValue({ id: 'u2', email: 'conflict@demo.com' });
+            mockTenantDbUser.findFirst
+                .mockResolvedValueOnce(dummyUser) // findOne succeeds
+                .mockResolvedValueOnce({ id: 'u2', email: 'conflict@demo.com' });
 
-            await expect(usersService.update(mockReq, 'u1', { email: 'conflict@demo.com' })).rejects.toThrow(ConflictException);
+            await expect(usersService.update(mockReq, 'u1', { email: 'conflict@demo.com' }, 'actor-1')).rejects.toThrow(ConflictException);
         });
 
         it('should update and return formatted user', async () => {
-            mockTenantDbUser.findUnique.mockResolvedValue(dummyUser); // findOne succeeds
-            mockTenantDbUser.findFirst.mockResolvedValue(null); // No email conflict
+            mockTenantDbUser.findFirst
+                .mockResolvedValueOnce(dummyUser) // findOne succeeds
+                .mockResolvedValueOnce(null); // No email conflict
             mockTenantDbUser.update.mockResolvedValue({ ...dummyUser, firstName: 'Johnny' });
 
-            const result = await usersService.update(mockReq, 'u1', { first_name: 'Johnny' });
+            const result = await usersService.update(mockReq, 'u1', { first_name: 'Johnny' }, 'actor-1');
 
             expect(mockTenantDbUser.update).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -184,14 +200,15 @@ describe('UsersService', () => {
 
     describe('updateStatus', () => {
         it('should update active status', async () => {
-            mockTenantDbUser.findUnique.mockResolvedValue(dummyUser); // findOne succeeds
+            mockTenantDbUser.findFirst.mockReset();
+            mockTenantDbUser.findFirst.mockResolvedValue(dummyUser); // findOne succeeds
             mockTenantDbUser.update.mockResolvedValue({ ...dummyUser, active: false });
 
-            const result = await usersService.updateStatus(mockReq, 'u1', false);
+            const result = await usersService.updateStatus(mockReq, 'u1', false, 'actor-1');
 
             expect(mockTenantDbUser.update).toHaveBeenCalledWith({
                 where: { id: 'u1' },
-                data: { active: false },
+                data: { active: false, updatedBy: 'actor-1' },
             });
             expect(result).toHaveProperty('active', false);
         });
