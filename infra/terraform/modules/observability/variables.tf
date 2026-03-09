@@ -11,8 +11,8 @@ variable "grafana_password" {
 
 variable "grafana_root_url" {
   type        = string
-  description = "Grafana root URL (for subpath serving). Override with your VM IP or domain."
-  default     = "http://localhost/grafana"
+  description = "Grafana root URL for host-based ingress. Override with your VM IP/domain if needed."
+  default     = "https://grafana.fieldops.local"
 }
 
 # --- Chart Versions ---

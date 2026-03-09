@@ -21,7 +21,7 @@ resource "helm_release" "kube_prometheus" {
       grafana.ini:
         server:
           root_url: "${var.grafana_root_url}"
-          serve_from_sub_path: true
+          serve_from_sub_path: false
 
       additionalDataSources:
         - name: Loki
