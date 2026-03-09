@@ -8,13 +8,16 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import * as crypto from 'crypto';
+import * as crypto from 'node:crypto';
 import * as nodemailer from 'nodemailer';
+import { v4 as uuidv4 } from 'uuid';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { JwtPayload } from './strategies/jwt.strategy';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { resolvePermissions } from '../common/auth/permissions';
+import { TokenBlacklistService } from '../common/security/token-blacklist.service';
 
 const SALT_ROUNDS = 10;
 const MAX_LOGIN_ATTEMPTS = 5;
@@ -22,13 +25,16 @@ const LOCKOUT_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
 @Injectable()
 export class AuthService {
-    private transporter: nodemailer.Transporter;
+    private readonly transporter: nodemailer.Transporter;
 
-    constructor(private readonly jwtService: JwtService) {
+    constructor(
+        private readonly jwtService: JwtService,
+        private readonly tokenBlacklistService: TokenBlacklistService,
+    ) {
         // Initialize email transporter (Mailtrap for development)
         this.transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST || 'sandbox.smtp.mailtrap.io',
-            port: parseInt(process.env.SMTP_PORT || '2525'),
+            port: Number.parseInt(process.env.SMTP_PORT || '2525'),
             auth: {
                 user: process.env.SMTP_USER || '',
                 pass: process.env.SMTP_PASS || '',
@@ -44,6 +50,13 @@ export class AuthService {
         const user = await req.tenantDb.user.findUnique({
             where: { email: dto.email },
         });
+
+        if (user?.deletedAt) {
+            throw new UnauthorizedException({
+                code: 'INVALID_CREDENTIALS',
+                message: 'Email ou mot de passe incorrect',
+            });
+        }
 
         if (!user) {
             throw new UnauthorizedException({
@@ -106,6 +119,7 @@ export class AuthService {
                 lockedUntil: null,
                 lastLoginAt: new Date(),
                 refreshToken: hashedRefreshToken,
+                updatedBy: user.id,
             },
         });
 
@@ -114,6 +128,8 @@ export class AuthService {
             sub: user.id,
             email: user.email,
             role: user.role,
+            permissions: resolvePermissions(user.role),
+            jti: uuidv4(),
             tenantId: req.tenantId,
             tenantSubdomain: req.tenantSubdomain,
         };
@@ -124,7 +140,7 @@ export class AuthService {
             access_token: accessToken,
             refresh_token: refreshToken,
             token_type: 'Bearer',
-            expires_in: parseInt(process.env.JWT_ACCESS_EXPIRY || '900'),
+            expires_in: Number.parseInt(process.env.JWT_ACCESS_EXPIRY || '900'),
             user: {
                 id: user.id,
                 email: user.email,
@@ -143,7 +159,7 @@ export class AuthService {
     async refresh(req: TenantRequest, refreshToken: string) {
         // Find user with a matching refresh token
         const users = await req.tenantDb.user.findMany({
-            where: { active: true },
+            where: { active: true, deletedAt: null },
         });
 
         let matchedUser = null;
@@ -170,7 +186,7 @@ export class AuthService {
 
         await req.tenantDb.user.update({
             where: { id: matchedUser.id },
-            data: { refreshToken: hashedRefreshToken },
+            data: { refreshToken: hashedRefreshToken, updatedBy: matchedUser.id },
         });
 
         // Generate new access token
@@ -178,6 +194,8 @@ export class AuthService {
             sub: matchedUser.id,
             email: matchedUser.email,
             role: matchedUser.role,
+            permissions: resolvePermissions(matchedUser.role),
+            jti: uuidv4(),
             tenantId: req.tenantId,
             tenantSubdomain: req.tenantSubdomain,
         };
@@ -185,18 +203,24 @@ export class AuthService {
         return {
             access_token: this.jwtService.sign(payload),
             refresh_token: newRefreshToken,
-            expires_in: parseInt(process.env.JWT_ACCESS_EXPIRY || '900'),
+            expires_in: Number.parseInt(process.env.JWT_ACCESS_EXPIRY || '900'),
         };
     }
 
     /**
      * Revoke the refresh token (logout).
      */
-    async logout(req: TenantRequest, userId: string) {
+    async logout(req: TenantRequest, userId: string, jwtPayload?: JwtPayload) {
         await req.tenantDb.user.update({
             where: { id: userId },
-            data: { refreshToken: null },
+            data: { refreshToken: null, updatedBy: userId },
         });
+
+        if (jwtPayload?.jti && jwtPayload?.exp) {
+            const now = Math.floor(Date.now() / 1000);
+            const ttl = Math.max(0, jwtPayload.exp - now);
+            await this.tokenBlacklistService.blacklist(jwtPayload.jti, ttl);
+        }
     }
 
     /**
@@ -206,6 +230,10 @@ export class AuthService {
         const user = await req.tenantDb.user.findUnique({
             where: { email: dto.email },
         });
+
+        if (user?.deletedAt) {
+            return { message: 'Email de reinitialisation envoye' };
+        }
 
         // Always return success (prevent email enumeration)
         if (!user) {
@@ -221,6 +249,7 @@ export class AuthService {
             data: {
                 resetToken: await bcrypt.hash(resetToken, SALT_ROUNDS),
                 resetTokenExpiry,
+                updatedBy: user.id,
             },
         });
 
@@ -260,6 +289,7 @@ export class AuthService {
         // Find users with non-expired reset tokens
         const users = await req.tenantDb.user.findMany({
             where: {
+                deletedAt: null,
                 resetToken: { not: null },
                 resetTokenExpiry: { gt: new Date() },
             },
@@ -292,6 +322,7 @@ export class AuthService {
                 resetTokenExpiry: null,
                 failedLoginAttempts: 0,
                 lockedUntil: null,
+                updatedBy: matchedUser.id,
             },
         });
 

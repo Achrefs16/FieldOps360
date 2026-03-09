@@ -20,7 +20,9 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { TenantRequest } from '../common/middleware/tenant.middleware';
+import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 
 @ApiTags('Users')
 @ApiBearerAuth('JWT')
@@ -57,8 +59,12 @@ export class UsersController {
     @ApiOperation({ summary: 'Create user', description: 'Create a new user in the tenant. Password must contain uppercase, lowercase, number, and special character.' })
     @ApiResponse({ status: 201, description: 'User created successfully.' })
     @ApiResponse({ status: 409, description: 'Email already in use.' })
-    async create(@Req() req: TenantRequest, @Body() dto: CreateUserDto) {
-        return this.usersService.create(req, dto);
+    async create(
+        @Req() req: TenantRequest,
+        @CurrentUser() user: JwtPayload,
+        @Body() dto: CreateUserDto,
+    ) {
+        return this.usersService.create(req, dto, user.sub);
     }
 
     @Get(':id')
@@ -80,10 +86,11 @@ export class UsersController {
     @ApiResponse({ status: 409, description: 'Email already in use.' })
     async update(
         @Req() req: TenantRequest,
+        @CurrentUser() user: JwtPayload,
         @Param('id') id: string,
         @Body() dto: UpdateUserDto,
     ) {
-        return this.usersService.update(req, id, dto);
+        return this.usersService.update(req, id, dto, user.sub);
     }
 
     @Patch(':id/status')
@@ -94,9 +101,10 @@ export class UsersController {
     @ApiResponse({ status: 404, description: 'User not found.' })
     async updateStatus(
         @Req() req: TenantRequest,
+        @CurrentUser() user: JwtPayload,
         @Param('id') id: string,
         @Body('active') active: boolean,
     ) {
-        return this.usersService.updateStatus(req, id, active);
+        return this.usersService.updateStatus(req, id, active, user.sub);
     }
 }

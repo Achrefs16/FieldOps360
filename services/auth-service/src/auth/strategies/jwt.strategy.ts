@@ -1,15 +1,19 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 export interface JwtPayload {
     sub: string; // userId
     email: string;
     role: string;
+    permissions: string[];
+    jti: string;
     tenantId: string;
     tenantSubdomain: string;
+    iat?: number;
+    exp?: number;
 }
 
 @Injectable()

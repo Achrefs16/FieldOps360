@@ -53,7 +53,7 @@ export class AuthController {
         @Req() req: TenantRequest,
         @CurrentUser() user: JwtPayload,
     ) {
-        await this.authService.logout(req, user.sub);
+        await this.authService.logout(req, user.sub, user);
     }
 
     @Post('forgot-password')

@@ -25,7 +25,7 @@ export class UsersService {
         const skip = (page - 1) * limit;
 
         // Build where clause
-        const where: any = {};
+        const where: any = { deletedAt: null };
         if (filters.role) where.role = filters.role;
         if (filters.active !== undefined) where.active = filters.active === 'true';
         if (filters.search) {
@@ -81,7 +81,7 @@ export class UsersService {
     /**
      * Create a new user in the tenant's database.
      */
-    async create(req: TenantRequest, dto: CreateUserDto) {
+    async create(req: TenantRequest, dto: CreateUserDto, actorId: string) {
         // Check for duplicate email
         const existing = await req.tenantDb.user.findUnique({
             where: { email: dto.email },
@@ -95,8 +95,7 @@ export class UsersService {
 
         const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
 
-        const user = await req.tenantDb.user.create({
-            data: {
+        const createData: any = {
                 email: dto.email,
                 passwordHash,
                 firstName: dto.first_name,
@@ -105,7 +104,12 @@ export class UsersService {
                 phone: dto.phone,
                 position: dto.position,
                 skills: dto.skills || [],
-            },
+                createdBy: actorId,
+                updatedBy: actorId,
+            };
+
+        const user = await req.tenantDb.user.create({
+            data: createData,
         });
 
         return {
@@ -123,8 +127,10 @@ export class UsersService {
      * Get a user by ID.
      */
     async findOne(req: TenantRequest, id: string) {
-        const user = await req.tenantDb.user.findUnique({
-            where: { id },
+        const findWhere: any = { id, deletedAt: null };
+
+        const user = await req.tenantDb.user.findFirst({
+            where: findWhere,
             select: {
                 id: true,
                 email: true,
@@ -158,14 +164,13 @@ export class UsersService {
     /**
      * Update a user by ID.
      */
-    async update(req: TenantRequest, id: string, dto: UpdateUserDto) {
+    async update(req: TenantRequest, id: string, dto: UpdateUserDto, actorId: string) {
         await this.findOne(req, id); // Ensure exists
 
         // Check for email conflict
         if (dto.email) {
-            const existing = await req.tenantDb.user.findFirst({
-                where: { email: dto.email, id: { not: id } },
-            });
+            const existingWhere: any = { email: dto.email, id: { not: id }, deletedAt: null };
+            const existing = await req.tenantDb.user.findFirst({ where: existingWhere });
             if (existing) {
                 throw new ConflictException({
                     code: 'DUPLICATE_EMAIL',
@@ -174,9 +179,7 @@ export class UsersService {
             }
         }
 
-        const user = await req.tenantDb.user.update({
-            where: { id },
-            data: {
+        const updateData: any = {
                 ...(dto.email && { email: dto.email }),
                 ...(dto.first_name && { firstName: dto.first_name }),
                 ...(dto.last_name && { lastName: dto.last_name }),
@@ -184,7 +187,12 @@ export class UsersService {
                 ...(dto.phone !== undefined && { phone: dto.phone }),
                 ...(dto.position !== undefined && { position: dto.position }),
                 ...(dto.skills && { skills: dto.skills }),
-            },
+                updatedBy: actorId,
+            };
+
+        const user = await req.tenantDb.user.update({
+            where: { id },
+            data: updateData,
         });
 
         return this.formatUser(user);
@@ -193,12 +201,13 @@ export class UsersService {
     /**
      * Activate or deactivate a user.
      */
-    async updateStatus(req: TenantRequest, id: string, active: boolean) {
+    async updateStatus(req: TenantRequest, id: string, active: boolean, actorId: string) {
         await this.findOne(req, id); // Ensure exists
 
+        const statusData: any = { active, updatedBy: actorId };
         const user = await req.tenantDb.user.update({
             where: { id },
-            data: { active },
+            data: statusData,
         });
 
         return this.formatUser(user);

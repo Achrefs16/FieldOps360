@@ -6,6 +6,7 @@ import * as path from 'path';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { TokenBlacklistService } from '../common/security/token-blacklist.service';
 
 @Module({
     imports: [
@@ -37,7 +38,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         }),
     ],
     controllers: [AuthController],
-    providers: [AuthService, JwtStrategy],
+    providers: [AuthService, JwtStrategy, TokenBlacklistService],
     exports: [AuthService, JwtModule],
 })
 export class AuthModule { }

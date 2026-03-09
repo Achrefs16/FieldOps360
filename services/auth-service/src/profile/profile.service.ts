@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import * as Minio from 'minio';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import { TenantRequest } from '../common/middleware/tenant.middleware';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -17,12 +17,12 @@ const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
 
 @Injectable()
 export class ProfileService {
-    private minioClient: Minio.Client;
+    private readonly minioClient: Minio.Client;
 
     constructor() {
         this.minioClient = new Minio.Client({
             endPoint: process.env.MINIO_ENDPOINT || 'localhost',
-            port: parseInt(process.env.MINIO_PORT || '9000'),
+            port: Number.parseInt(process.env.MINIO_PORT || '9000'),
             useSSL: process.env.MINIO_USE_SSL === 'true',
             accessKey: process.env.MINIO_ACCESS_KEY || '',
             secretKey: process.env.MINIO_SECRET_KEY || '',
@@ -33,8 +33,8 @@ export class ProfileService {
      * Get the profile of the currently authenticated user.
      */
     async getProfile(req: TenantRequest, userId: string) {
-        const user = await req.tenantDb.user.findUnique({
-            where: { id: userId },
+        const user = await req.tenantDb.user.findFirst({
+            where: { id: userId, deletedAt: null },
         });
 
         if (!user) {
@@ -60,6 +60,7 @@ export class ProfileService {
                 ...(dto.phone !== undefined && { phone: dto.phone }),
                 ...(dto.language && { language: dto.language }),
                 ...(dto.timezone && { timezone: dto.timezone }),
+                updatedBy: userId,
             },
         });
 
@@ -81,8 +82,8 @@ export class ProfileService {
             });
         }
 
-        const user = await req.tenantDb.user.findUnique({
-            where: { id: userId },
+        const user = await req.tenantDb.user.findFirst({
+            where: { id: userId, deletedAt: null },
         });
 
         if (!user) {
@@ -102,6 +103,7 @@ export class ProfileService {
             data: {
                 passwordHash: await bcrypt.hash(dto.new_password, SALT_ROUNDS),
                 firstLogin: false,
+                updatedBy: userId,
             },
         });
 
@@ -154,7 +156,7 @@ export class ProfileService {
         // Update user record
         await req.tenantDb.user.update({
             where: { id: userId },
-            data: { avatarUrl },
+            data: { avatarUrl, updatedBy: userId },
         });
 
         return { avatar_url: avatarUrl };
