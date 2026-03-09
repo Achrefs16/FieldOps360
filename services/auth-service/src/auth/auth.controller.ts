@@ -1,5 +1,6 @@
 import {
     Controller,
+    Get,
     Post,
     Body,
     Req,
@@ -20,7 +21,7 @@ import type { JwtPayload } from './strategies/jwt.strategy';
 
 @ApiTags('Authentication')
 @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant subdomain (e.g. "demo")', required: true })
-@Controller('auth/v1')
+@Controller('v1/auth')
 export class AuthController {
     constructor(private readonly authService: AuthService) { }
 
@@ -76,5 +77,22 @@ export class AuthController {
         @Body() dto: ResetPasswordDto,
     ) {
         return this.authService.resetPassword(req, dto);
+    }
+
+    @Get('validate')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    @ApiBearerAuth('JWT')
+    @ApiOperation({
+        summary: 'Validate access token',
+        description: 'ForwardAuth endpoint for Traefik. Returns token validity and authenticated user context.',
+    })
+    @ApiResponse({ status: 200, description: 'Token is valid.' })
+    @ApiResponse({ status: 401, description: 'Token is invalid or expired.' })
+    async validate(@CurrentUser() user: JwtPayload) {
+        return {
+            valid: true,
+            user,
+        };
     }
 }

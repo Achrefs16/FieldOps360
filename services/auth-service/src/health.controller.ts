@@ -1,11 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Health')
-@Controller('auth/v1')
+@Controller('v1/auth')
 export class HealthController {
     /**
-     * GET /api/auth/v1/health
+    * GET /api/v1/auth/health
      * K8s liveness/readiness probe endpoint.
      */
     @Get('health')

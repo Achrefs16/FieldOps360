@@ -21,7 +21,7 @@ import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 @ApiTags('Profile')
 @ApiBearerAuth('JWT')
 @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant subdomain', required: true })
-@Controller('auth/v1/me')
+@Controller('v1/me')
 @UseGuards(JwtAuthGuard)
 export class ProfileController {
     constructor(private readonly profileService: ProfileService) { }

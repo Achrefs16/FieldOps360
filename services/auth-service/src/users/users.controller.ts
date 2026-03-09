@@ -25,7 +25,7 @@ import type { TenantRequest } from '../common/middleware/tenant.middleware';
 @ApiTags('Users')
 @ApiBearerAuth('JWT')
 @ApiHeader({ name: 'X-Tenant-ID', description: 'Tenant subdomain', required: true })
-@Controller('auth/v1/users')
+@Controller('v1/users')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
     constructor(private readonly usersService: UsersService) { }

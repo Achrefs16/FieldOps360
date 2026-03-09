@@ -30,7 +30,7 @@ export class AppModule implements NestModule {
     // Apply tenant middleware to all auth routes EXCEPT health check
     consumer
       .apply(TenantMiddleware)
-      .exclude({ path: 'auth/v1/health', method: RequestMethod.GET })
-      .forRoutes({ path: 'auth/v1/*', method: RequestMethod.ALL });
+      .exclude({ path: 'v1/auth/health', method: RequestMethod.GET })
+      .forRoutes({ path: 'v1/*', method: RequestMethod.ALL });
   }
 }

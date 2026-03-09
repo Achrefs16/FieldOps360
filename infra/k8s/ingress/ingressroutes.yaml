@@ -11,7 +11,7 @@ spec:
     # ----------------------------------------------------------------------
     # Auth Service
     # ----------------------------------------------------------------------
-    - match: PathPrefix(`/api/auth`) || PathPrefix(`/api/docs`)
+    - match: PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/docs`)
       kind: Rule
       middlewares:
         - name: rate-limit-auth

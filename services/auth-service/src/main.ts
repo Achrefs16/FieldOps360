@@ -99,7 +99,7 @@ async function bootstrap() {
   Auth Service is running
   Port: ${port}
   Environment: ${process.env.NODE_ENV || 'development'}
-  API: /api/auth/v1
+  API: /api/v1/auth
   Docs: /api/docs
   `);
 }

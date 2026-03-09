@@ -69,7 +69,7 @@ RUN chown -R nestjs:nodejs /app
 USER nestjs
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/auth/v1/health || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/v1/auth/health || exit 1
 
 EXPOSE 3001
 
