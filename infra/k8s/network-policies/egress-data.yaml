@@ -45,3 +45,11 @@ spec:
       ports:
         - protocol: TCP
           port: 9000
+    # Allow Vault to reach Kubernetes API server (required for TokenReview)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: default
+      ports:
+        - protocol: TCP
+          port: 443
