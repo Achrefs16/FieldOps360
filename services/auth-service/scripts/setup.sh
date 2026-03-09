@@ -3,6 +3,8 @@
 # setup.sh - One-time infrastructure setup for Auth Service on K3s
 # ================================================================
 # NOTE: This script targets the legacy `fieldops-dev` namespace flow.
+# For fresh VMs on the current stack, prefer the single entrypoint:
+#   bash scripts/bootstrap-demo-tenant.sh
 # For the current logical-namespace stack, use:
 #   - scripts/migrate-auth-schema.sh
 #   - scripts/migrate-auth-all-tenants.sh
