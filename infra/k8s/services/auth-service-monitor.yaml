@@ -1,0 +1,20 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: auth-service
+  namespace: fieldops-observability
+  labels:
+    release: kube-prometheus
+    app.kubernetes.io/part-of: fieldops360
+spec:
+  namespaceSelector:
+    matchNames:
+      - fieldops-auth
+  selector:
+    matchLabels:
+      app: auth-service
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s

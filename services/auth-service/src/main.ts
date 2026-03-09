@@ -3,13 +3,31 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import type { NextFunction, Request, Response } from 'express';
 import { AppModule } from './app.module';
+import {
+  metricsContentType,
+  metricsMiddleware,
+  metricsPayload,
+} from './observability/prometheus.metrics';
 import { annotateHttpSpan, closeJaegerTracer, getJaegerTracer } from './tracing/jaeger.tracer';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const tracer = getJaegerTracer();
+  const expressApp = app.getHttpAdapter().getInstance();
+
+  expressApp.get('/metrics', async (_req: Request, res: Response) => {
+    res.setHeader('Content-Type', metricsContentType());
+    res.send(await metricsPayload());
+  });
+
+  app.use(metricsMiddleware);
 
   app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path === '/metrics') {
+      next();
+      return;
+    }
+
     const span = tracer.startSpan(`${req.method} ${req.path}`);
 
     res.on('finish', () => {

@@ -27,7 +27,7 @@ export function getJaegerTracer(): Tracer {
 
   const collectorEndpoint =
     process.env.JAEGER_COLLECTOR_ENDPOINT ||
-    'http://jaeger-collector.monitoring.svc.cluster.local:14268/api/traces';
+    'http://jaeger-collector.fieldops-observability.svc.cluster.local:14268/api/traces';
 
   const config: TracingConfig = {
     serviceName: process.env.JAEGER_SERVICE_NAME || 'auth-service',
