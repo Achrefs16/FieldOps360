@@ -10,6 +10,7 @@ resource "helm_release" "kube_prometheus" {
   version    = var.prometheus_chart_version
   timeout    = 900
   wait       = true
+  force_update = true
 
   values = [<<-YAML
     grafana:
@@ -70,6 +71,20 @@ resource "helm_release" "kube_prometheus" {
       enabled: true
       hostNetwork: false
       hostPID: false
+      hostRootFsMount: true
+      service:
+        enabled: true
+        type: ClusterIP
+        port: 9100
+        targetPort: 9100
+
+    prometheus-node-exporter:
+      hostNetwork: false
+      hostPID: false
+      service:
+        type: ClusterIP
+        port: 9100
+        targetPort: 9100
 
     kubeStateMetrics:
       enabled: true
