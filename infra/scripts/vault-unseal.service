@@ -1,0 +1,27 @@
+[Unit]
+Description=HashiCorp Vault Auto-Unseal Service
+Documentation=https://developer.hashicorp.com/vault/docs/concepts/seal
+After=network-online.target k3s.service
+Wants=network-online.target
+# Ensure K3s is fully running before attempting to unseal
+Requires=k3s.service
+
+[Service]
+Type=oneshot
+# Path to the unseal script (adjust if FieldOps repo is in different location)
+ExecStart=/bin/bash /home/vagrant/FieldOps360/infra/scripts/vault-unseal.sh
+# Run as root (required for kubectl with K3s kubeconfig)
+User=root
+Group=root
+# Restart policy
+Restart=on-failure
+RestartSec=30s
+# Timeout (5 minutes max)
+TimeoutStartSec=300
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=vault-unseal
+
+[Install]
+WantedBy=multi-user.target

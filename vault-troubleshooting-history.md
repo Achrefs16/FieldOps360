@@ -112,3 +112,176 @@ sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl logs -n fieldops-auth deploy/a
 Expected state:
 - `postgresql-0` is `1/1 Running`.
 - `auth-service` pods become `2/2 Running`.
+
+---
+
+## March 2026: Vault Auto-Unseal Solution (Permanent Fix)
+
+### The Seal/Unseal Problem Explained
+
+**Why Vault Seals Exist:**
+Vault sealing is a **core security feature**, not a bug. It protects secrets from physical server theft and memory dump attacks:
+
+1. **Encrypted Storage**: Vault stores all secrets encrypted on disk using a **master key**
+2. **Protected Master Key**: The master key itself is encrypted by **unseal key(s)** (Shamir shares)
+3. **Keys Never Persist**: Unseal keys are NEVER stored on disk (only in operator's secure storage)
+4. **Sealed by Default**: After any restart, Vault starts **sealed** (master key not in memory → can't decrypt secrets)
+
+**Real-world threat model:**
+- Attacker steals VM disk → gets encrypted data, but NO unseal keys → secrets remain protected
+- Attacker gains root access during downtime → Vault auto-seals on restart → secrets inaccessible
+- Memory dump attack → after reboot, master key is wiped from RAM → attacker gets nothing
+
+**The tradeoff:**
+- **Production**: Manual unsealing is GOOD (audit trail, deliberate human action required)
+- **Dev/Lab**: Manual unsealing is ANNOYING (every VM reboot = manual intervention)
+
+### Solution: Systemd Auto-Unseal Service
+
+For **single-VM lab/demo environments**, we trade maximum security for operational convenience by implementing automatic unsealing on boot.
+
+**Security considerations:**
+- Unseal key stored on VM at `/root/.vault-unseal-key` (600 permissions, root-only)
+- Less secure than KMS auto-unseal (cloud provider HSMs)
+- Appropriate for non-production environments
+- If VM is compromised, attacker can read unseal key
+
+### Implementation Files
+
+Three new files created in `infra/scripts/`:
+
+1. **vault-unseal.sh**: Main unseal logic
+   - Waits for K3s API server to be ready
+   - Waits for Vault pod to be running
+   - Checks if Vault is already unsealed (idempotent)
+   - Reads unseal key from `/root/.vault-unseal-key`
+   - Unseals Vault via `kubectl exec`
+   - Verifies unseal succeeded
+   - Logs all operations to systemd journal
+
+2. **vault-unseal.service**: Systemd unit file
+   - Runs after `k3s.service` and `network-online.target`
+   - One-shot service (runs once per boot)
+   - Auto-restart on failure (30s backoff)
+   - 5-minute timeout
+   - Logs to journal with identifier `vault-unseal`
+
+3. **setup-vault-autounseal.sh**: One-time installation script
+   - Prompts for unseal key
+   - Stores key securely at `/root/.vault-unseal-key`
+   - Installs systemd service
+   - Enables service to run on boot
+   - Optionally tests unsealing immediately
+
+### Installation Instructions
+
+Run this **ONCE** on your VM:
+
+```bash
+# SSH into your VM
+cd ~/FieldOps360
+
+# Make setup script executable
+chmod +x infra/scripts/setup-vault-autounseal.sh
+
+# Run setup (will prompt for unseal key)
+sudo infra/scripts/setup-vault-autounseal.sh
+```
+
+**During setup, you'll be prompted for:**
+1. Your Vault unseal key (stored securely at `/root/.vault-unseal-key`)
+2. Whether to test unseal immediately (recommended)
+
+### Verification Commands
+
+```bash
+# Check service status
+sudo systemctl status vault-unseal
+
+# View recent logs
+sudo journalctl -u vault-unseal -n 50
+
+# Test unseal manually
+sudo systemctl start vault-unseal
+
+# Follow logs in real-time
+sudo journalctl -u vault-unseal -f
+```
+
+### Expected Boot Sequence
+
+After VM reboot:
+1. VM starts → systemd initializes
+2. K3s starts (`k3s.service`)
+3. Vault pod starts (but sealed)
+4. `vault-unseal.service` triggers automatically
+5. Script waits for Vault pod ready
+6. Script unseals Vault
+7. Auth service and backup jobs start successfully (Vault injection works)
+
+### Monitoring
+
+Check if auto-unseal worked after reboot:
+
+```bash
+# Check Vault seal status directly
+sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl exec -n fieldops-data vault-0 -- vault status
+
+# Check service logs
+sudo journalctl -u vault-unseal --since "10 minutes ago"
+
+# Check dependent workloads
+sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n fieldops-auth
+sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n fieldops-data
+```
+
+### Troubleshooting
+
+**Service failed:**
+```bash
+# View full logs
+sudo journalctl -u vault-unseal -n 100
+
+# Common issues:
+# - Unseal key file missing/empty → check /root/.vault-unseal-key exists
+# - Wrong unseal key → re-run setup-vault-autounseal.sh
+# - K3s not ready → increase MAX_RETRIES in vault-unseal.sh
+```
+
+**Vault still sealed after boot:**
+```bash
+# Check if service ran
+sudo systemctl status vault-unseal
+
+# If service is inactive, start it manually
+sudo systemctl start vault-unseal
+sudo journalctl -u vault-unseal -f
+```
+
+### Disabling Auto-Unseal
+
+If you want to return to manual unsealing:
+
+```bash
+# Disable service
+sudo systemctl disable vault-unseal
+
+# Optionally remove unseal key
+sudo rm /root/.vault-unseal-key
+```
+
+### Future Production Migration
+
+When moving to production, replace this with **KMS Auto-Unseal**:
+
+```hcl
+# Vault configuration (Terraform or Helm values)
+seal "awskms" {
+  region     = "us-east-1"
+  kms_key_id = "alias/vault-unseal-key"
+  access_key = "AWS_ACCESS_KEY"
+  secret_key = "AWS_SECRET_KEY"
+}
+```
+
+This removes the unseal key from the server entirely and delegates unsealing to AWS/Azure/GCP KMS (proper production security).
