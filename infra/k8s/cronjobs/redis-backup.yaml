@@ -37,46 +37,23 @@ spec:
         spec:
           restartPolicy: OnFailure
           serviceAccountName: backup-job
-          initContainers:
-            - name: redis-dump
-              image: redis:7-alpine
+          containers:
+            - name: redis-backup
+              image: alpine:3.19
               command:
                 - /bin/sh
                 - -c
                 - |
+                  apk add --no-cache redis
                   source /vault/secrets/redis
+                  source /vault/secrets/minio
                   TIMESTAMP=$(date +%Y%m%d_%H%M%S)
                   echo "Starting Redis RDB dump at ${TIMESTAMP}..."
-                  redis-cli -h redis-master.fieldops-data.svc.cluster.local -a "$REDIS_PASSWORD" --rdb /backup/dump_${TIMESTAMP}.rdb
-                  echo "${TIMESTAMP}" > /backup/timestamp
-                  echo "Redis dump complete."
-              volumeMounts:
-                - name: backup-data
-                  mountPath: /backup
-                # vault-agent-init writes secrets here but webhook doesn't auto-mount
-                # this on user-defined init containers — we add it explicitly
-                - name: vault-secrets
-                  mountPath: /vault/secrets
-          containers:
-            - name: mc-upload
-              image: minio/mc:latest
-              command:
-                - /bin/sh
-                - -c
-                - |
-                  source /vault/secrets/minio
-                  TIMESTAMP=$(cat /backup/timestamp)
-                  echo "Uploading redis_${TIMESTAMP}.rdb to MinIO..."
+                  redis-cli -h redis-master.fieldops-data.svc.cluster.local -a "$REDIS_PASSWORD" --rdb /tmp/dump_${TIMESTAMP}.rdb
+                  echo "Redis dump complete. Installing MinIO client..."
+                  wget -q https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/local/bin/mc && chmod +x /usr/local/bin/mc
                   mc alias set minio http://minio:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
-                  mc cp /backup/dump_${TIMESTAMP}.rdb minio/fieldops-backups/redis/redis_${TIMESTAMP}.rdb
-                  mc rm --recursive --older-than 30d minio/fieldops-backups/redis/
-                  echo "Upload complete."
-              volumeMounts:
-                - name: backup-data
-                  mountPath: /backup
-          volumes:
-            - name: backup-data
-              emptyDir: {}
-            - name: vault-secrets
-              emptyDir:
-                medium: Memory
+                  mc cp /tmp/dump_${TIMESTAMP}.rdb minio/fieldops-backups/redis/redis_${TIMESTAMP}.rdb
+                  mc rm --recursive --older-than 30d minio/fieldops-backups/redis/ || true
+                  echo "Backup and upload complete."
+          volumes: []
