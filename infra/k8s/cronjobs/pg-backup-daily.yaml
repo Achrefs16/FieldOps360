@@ -15,6 +15,11 @@ spec:
           annotations:
             vault.hashicorp.com/agent-inject: "true"
             vault.hashicorp.com/agent-pre-populate-only: "true"
+            vault.hashicorp.com/agent-extra-secret: "vault-approle-backup"
+            vault.hashicorp.com/auth-type: "approle"
+            vault.hashicorp.com/auth-path: "auth/approle"
+            vault.hashicorp.com/auth-config-role-id-file-path: "/vault/custom/role-id"
+            vault.hashicorp.com/auth-config-secret-id-file-path: "/vault/custom/secret-id"
             vault.hashicorp.com/role: "backup-job"
             vault.hashicorp.com/agent-inject-secret-db: "secret/data/postgresql"
             vault.hashicorp.com/agent-inject-template-db: |
@@ -29,7 +34,7 @@ spec:
               {{- end -}}
         spec:
           restartPolicy: OnFailure
-          serviceAccountName: default
+          serviceAccountName: backup-job
           containers:
             - name: pg-dump
               image: postgres:15-alpine

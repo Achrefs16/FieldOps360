@@ -96,20 +96,13 @@ EOF"
 # AppRole for auth-service
 ${KUBECTL_CMD} exec -n ${VAULT_NAMESPACE} ${VAULT_POD} -- sh -c "VAULT_TOKEN='${VAULT_TOKEN}' vault write auth/approle/role/auth-service token_policies=read-all token_ttl=1h token_max_ttl=4h"
 
-# Export RoleID and SecretID
+# Export auth-service RoleID and SecretID
 ROLE_ID=$(${KUBECTL_CMD} exec -n ${VAULT_NAMESPACE} ${VAULT_POD} -- sh -c "VAULT_TOKEN='${VAULT_TOKEN}' vault read -field=role_id auth/approle/role/auth-service/role-id")
 SECRET_ID=$(${KUBECTL_CMD} exec -n ${VAULT_NAMESPACE} ${VAULT_POD} -- sh -c "VAULT_TOKEN='${VAULT_TOKEN}' vault write -f -field=secret_id auth/approle/role/auth-service/secret-id")
 
-echo "AppRole credentials generated"
-echo ""
-echo "====================================================="
-echo " IMPORTANT: Save these AppRole credentials!"
-echo "====================================================="
+echo "auth-service AppRole credentials generated"
 echo " Role ID:   ${ROLE_ID}"
 echo " Secret ID: ${SECRET_ID}"
-echo "====================================================="
-echo ""
-echo "Storing AppRole credentials as K8s secret..."
 
 ${KUBECTL_CMD} create secret generic vault-approle-auth \
   --from-literal=role-id="${ROLE_ID}" \
@@ -119,9 +112,31 @@ ${KUBECTL_CMD} create secret generic vault-approle-auth \
 
 echo "K8s secret 'vault-approle-auth' created/updated in fieldops-auth namespace"
 
+# AppRole for backup-job (pg-backup + redis-backup cronjobs)
+${KUBECTL_CMD} exec -n ${VAULT_NAMESPACE} ${VAULT_POD} -- sh -c "VAULT_TOKEN='${VAULT_TOKEN}' vault write auth/approle/role/backup-job token_policies=read-all token_ttl=30m token_max_ttl=1h"
+
+BACKUP_ROLE_ID=$(${KUBECTL_CMD} exec -n ${VAULT_NAMESPACE} ${VAULT_POD} -- sh -c "VAULT_TOKEN='${VAULT_TOKEN}' vault read -field=role_id auth/approle/role/backup-job/role-id")
+BACKUP_SECRET_ID=$(${KUBECTL_CMD} exec -n ${VAULT_NAMESPACE} ${VAULT_POD} -- sh -c "VAULT_TOKEN='${VAULT_TOKEN}' vault write -f -field=secret_id auth/approle/role/backup-job/secret-id")
+
+echo "backup-job AppRole credentials generated"
+echo " Role ID:   ${BACKUP_ROLE_ID}"
+echo " Secret ID: ${BACKUP_SECRET_ID}"
+
+${KUBECTL_CMD} create secret generic vault-approle-backup \
+  --from-literal=role-id="${BACKUP_ROLE_ID}" \
+  --from-literal=secret-id="${BACKUP_SECRET_ID}" \
+  -n fieldops-data \
+  --dry-run=client -o yaml | ${KUBECTL_CMD} apply -f -
+
+echo "K8s secret 'vault-approle-backup' created/updated in fieldops-data namespace"
+
+# Ensure backup-job ServiceAccount exists in fieldops-data
+${KUBECTL_CMD} create serviceaccount backup-job -n fieldops-data --dry-run=client -o yaml | ${KUBECTL_CMD} apply -f -
+echo "ServiceAccount 'backup-job' ensured in fieldops-data namespace"
+
 
 echo "======================================================"
 echo " Vault Bootstrap Complete! "
-echo " Secrets written. AppRole created. K8s secret updated."
+echo " Secrets written. AppRoles created. K8s secrets updated."
 echo " Restart auth-service pods to pick up new credentials."
 echo "======================================================"
