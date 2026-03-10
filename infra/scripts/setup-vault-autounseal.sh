@@ -37,6 +37,22 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $*"
 }
 
+validate_unseal_key() {
+    local key="$1"
+
+    if [ -z "$key" ]; then
+        log_error "Unseal key cannot be empty"
+        exit 1
+    fi
+
+    # Catch common placeholders pasted by mistake.
+    if [[ "$key" == *"PASTE"* ]] || [[ "$key" == *"YOUR_REAL_UNSEAL_KEY"* ]] || [[ "$key" == *"<"*"UNSEAL"*">"* ]]; then
+        log_error "Detected placeholder text instead of a real unseal key."
+        log_error "Paste the actual key from your 'vault operator init' output."
+        exit 1
+    fi
+}
+
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then
     log_error "This script must be run as root (use sudo)"
@@ -81,6 +97,7 @@ if [ -f "$UNSEAL_KEY_FILE" ]; then
     else
         read -sp "Enter your Vault unseal key: " UNSEAL_KEY
         echo ""
+        validate_unseal_key "$UNSEAL_KEY"
         echo "$UNSEAL_KEY" > "$UNSEAL_KEY_FILE"
         chmod 600 "$UNSEAL_KEY_FILE"
         log_success "Unseal key updated"
@@ -92,11 +109,7 @@ else
     echo ""
     read -sp "Enter your Vault unseal key: " UNSEAL_KEY
     echo ""
-    
-    if [ -z "$UNSEAL_KEY" ]; then
-        log_error "Unseal key cannot be empty"
-        exit 1
-    fi
+    validate_unseal_key "$UNSEAL_KEY"
     
     echo "$UNSEAL_KEY" > "$UNSEAL_KEY_FILE"
     chmod 600 "$UNSEAL_KEY_FILE"

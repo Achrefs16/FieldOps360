@@ -87,10 +87,18 @@ if [ -z "$UNSEAL_KEY" ]; then
     exit 1
 fi
 
+if [[ "$UNSEAL_KEY" == *"PASTE"* ]] || [[ "$UNSEAL_KEY" == *"YOUR_REAL_UNSEAL_KEY"* ]] || [[ "$UNSEAL_KEY" == *"<"*"UNSEAL"*">"* ]]; then
+    log "ERROR: Unseal key file contains placeholder text, not a real key"
+    log "ERROR: Update $UNSEAL_KEY_FILE with the real key from 'vault operator init'"
+    exit 1
+fi
+
 # Unseal Vault
 log "INFO: Unsealing Vault..."
+set +e
 UNSEAL_OUTPUT=$(sudo env KUBECONFIG="$KUBECONFIG" kubectl exec -n "$VAULT_NAMESPACE" "$VAULT_POD" -- vault operator unseal "$UNSEAL_KEY" 2>&1)
 UNSEAL_EXIT_CODE=$?
+set -e
 
 if [ $UNSEAL_EXIT_CODE -ne 0 ]; then
     log "ERROR: Vault unseal failed with exit code $UNSEAL_EXIT_CODE"
