@@ -53,6 +53,10 @@ spec:
               volumeMounts:
                 - name: backup-data
                   mountPath: /backup
+                # vault-agent-init writes secrets here but webhook doesn't auto-mount
+                # this on user-defined init containers — we add it explicitly
+                - name: vault-secrets
+                  mountPath: /vault/secrets
           containers:
             - name: mc-upload
               image: minio/mc:latest
