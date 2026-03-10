@@ -77,3 +77,6 @@ spec:
           volumes:
             - name: backup-data
               emptyDir: {}
+            - name: vault-secrets
+              emptyDir:
+                medium: Memory
