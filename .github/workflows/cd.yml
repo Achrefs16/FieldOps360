@@ -48,15 +48,15 @@ jobs:
           NAMESPACE="fieldops-dev"
 
           for SERVICE in auth-service project-service resource-service planning-service reporting-service; do
-            if kubectl get deployment $SERVICE -n $NAMESPACE 2>/dev/null; then
-              kubectl rollout restart deployment/$SERVICE -n $NAMESPACE
-              kubectl rollout status deployment/$SERVICE -n $NAMESPACE --timeout=120s
+            if sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get deployment $SERVICE -n $NAMESPACE 2>/dev/null; then
+              sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout restart deployment/$SERVICE -n $NAMESPACE
+              sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout status deployment/$SERVICE -n $NAMESPACE --timeout=120s
             fi
           done
 
       - name: Status
         if: steps.guard.outputs.skip != 'true'
-        run: kubectl get pods -n fieldops-dev
+        run: sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n fieldops-dev
 
   deploy-prod:
     if: >
@@ -93,12 +93,12 @@ jobs:
           NAMESPACE="fieldops-prod"
 
           for SERVICE in auth-service project-service resource-service planning-service reporting-service; do
-            if kubectl get deployment $SERVICE -n $NAMESPACE 2>/dev/null; then
-              kubectl rollout restart deployment/$SERVICE -n $NAMESPACE
-              kubectl rollout status deployment/$SERVICE -n $NAMESPACE --timeout=180s
+            if sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get deployment $SERVICE -n $NAMESPACE 2>/dev/null; then
+              sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout restart deployment/$SERVICE -n $NAMESPACE
+              sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl rollout status deployment/$SERVICE -n $NAMESPACE --timeout=180s
             fi
           done
 
       - name: Status
         if: steps.guard.outputs.skip != 'true'
-        run: kubectl get pods -n fieldops-prod
+        run: sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get pods -n fieldops-prod
