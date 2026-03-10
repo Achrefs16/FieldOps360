@@ -45,6 +45,22 @@ spec:
       ports:
         - protocol: TCP
           port: 9000
+    # Allow backup jobs to reach PostgreSQL within namespace
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow backup jobs to reach Redis within namespace
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
     # Allow Vault to reach Kubernetes API server (required for TokenReview)
     - to:
         - namespaceSelector:

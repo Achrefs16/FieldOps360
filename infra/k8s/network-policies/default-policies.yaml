@@ -309,6 +309,29 @@ spec:
   policyTypes:
     - Ingress
 ---
+# Allow backup-job pods to reach PostgreSQL, Redis, and MinIO within fieldops-data
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-backup-to-databases
+  namespace: fieldops-data
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: backup-job
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 6379
+        - protocol: TCP
+          port: 9000
+---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

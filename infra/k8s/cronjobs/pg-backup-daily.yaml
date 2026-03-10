@@ -12,6 +12,8 @@ spec:
     spec:
       template:
         metadata:
+          labels:
+            app: backup-job
           annotations:
             vault.hashicorp.com/agent-inject: "true"
             vault.hashicorp.com/agent-pre-populate-only: "true"
@@ -35,7 +37,7 @@ spec:
         spec:
           restartPolicy: OnFailure
           serviceAccountName: backup-job
-          containers:
+          initContainers:
             - name: pg-dump
               image: postgres:15-alpine
               command:
@@ -43,9 +45,31 @@ spec:
                 - -c
                 - |
                   source /vault/secrets/db
-                  source /vault/secrets/minio
                   TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-                  pg_dump -h postgresql -U postgres -Fc -Z9 -f /tmp/backup_${TIMESTAMP}.dump fieldops_platform
-                  mc alias set minio http://minio:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY
-                  mc cp /tmp/backup_${TIMESTAMP}.dump minio/fieldops-backups/daily/
+                  echo "Starting pg_dump at ${TIMESTAMP}..."
+                  pg_dump -h postgresql -U postgres -Fc -Z9 -f /backup/backup_${TIMESTAMP}.dump fieldops_platform
+                  echo "${TIMESTAMP}" > /backup/timestamp
+                  echo "pg_dump complete."
+              volumeMounts:
+                - name: backup-data
+                  mountPath: /backup
+          containers:
+            - name: mc-upload
+              image: minio/mc:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  source /vault/secrets/minio
+                  TIMESTAMP=$(cat /backup/timestamp)
+                  echo "Uploading backup_${TIMESTAMP}.dump to MinIO..."
+                  mc alias set minio http://minio:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
+                  mc cp /backup/backup_${TIMESTAMP}.dump minio/fieldops-backups/daily/
                   mc rm --recursive --older-than 90d minio/fieldops-backups/daily/
+                  echo "Upload complete."
+              volumeMounts:
+                - name: backup-data
+                  mountPath: /backup
+          volumes:
+            - name: backup-data
+              emptyDir: {}

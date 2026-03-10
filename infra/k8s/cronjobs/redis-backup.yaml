@@ -12,6 +12,8 @@ spec:
     spec:
       template:
         metadata:
+          labels:
+            app: backup-job
           annotations:
             vault.hashicorp.com/agent-inject: "true"
             vault.hashicorp.com/agent-pre-populate-only: "true"
@@ -35,18 +37,39 @@ spec:
         spec:
           restartPolicy: OnFailure
           serviceAccountName: backup-job
-          containers:
-            - name: redis-backup
+          initContainers:
+            - name: redis-dump
               image: redis:7-alpine
               command:
                 - /bin/sh
                 - -c
                 - |
                   source /vault/secrets/redis
-                  source /vault/secrets/minio
-                  set -e
                   TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-                  redis-cli -h redis-master.fieldops-data.svc.cluster.local -a "$REDIS_PASSWORD" --rdb /tmp/dump.rdb
+                  echo "Starting Redis RDB dump at ${TIMESTAMP}..."
+                  redis-cli -h redis-master.fieldops-data.svc.cluster.local -a "$REDIS_PASSWORD" --rdb /backup/dump_${TIMESTAMP}.rdb
+                  echo "${TIMESTAMP}" > /backup/timestamp
+                  echo "Redis dump complete."
+              volumeMounts:
+                - name: backup-data
+                  mountPath: /backup
+          containers:
+            - name: mc-upload
+              image: minio/mc:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  source /vault/secrets/minio
+                  TIMESTAMP=$(cat /backup/timestamp)
+                  echo "Uploading redis_${TIMESTAMP}.rdb to MinIO..."
                   mc alias set minio http://minio:9000 "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"
-                  mc cp /tmp/dump.rdb minio/fieldops-backups/redis/redis_${TIMESTAMP}.rdb
+                  mc cp /backup/dump_${TIMESTAMP}.rdb minio/fieldops-backups/redis/redis_${TIMESTAMP}.rdb
                   mc rm --recursive --older-than 30d minio/fieldops-backups/redis/
+                  echo "Upload complete."
+              volumeMounts:
+                - name: backup-data
+                  mountPath: /backup
+          volumes:
+            - name: backup-data
+              emptyDir: {}
