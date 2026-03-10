@@ -52,6 +52,7 @@ export class AuthController {
     @ApiBearerAuth('JWT')
     @ApiOperation({ summary: 'Logout', description: 'Revoke the refresh token. The access token remains valid until it expires.' })
     @ApiResponse({ status: 204, description: 'Logout successful.' })
+    @ApiResponse({ status: 401, description: 'Unauthorized (missing, invalid, or expired access token).' })
     async logout(
         @Req() req: TenantRequest,
         @CurrentUser() user: JwtPayload,
@@ -104,6 +105,7 @@ export class AuthController {
     @ApiBearerAuth('JWT')
     @ApiOperation({ summary: 'Enable MFA', description: 'Generate TOTP secret and QR code for authenticator enrollment.' })
     @ApiResponse({ status: 200, description: 'MFA enrollment challenge generated.' })
+    @ApiResponse({ status: 401, description: 'Unauthorized (missing, invalid, or expired access token).' })
     async enableMfa(
         @Req() req: TenantRequest,
         @CurrentUser() user: JwtPayload,
@@ -118,6 +120,7 @@ export class AuthController {
     @ApiBearerAuth('JWT')
     @ApiOperation({ summary: 'Verify MFA', description: 'Verify TOTP code and activate MFA on account.' })
     @ApiResponse({ status: 200, description: 'MFA enabled successfully.' })
+    @ApiResponse({ status: 401, description: 'Unauthorized (missing, invalid, or expired access token).' })
     async verifyMfa(
         @Req() req: TenantRequest,
         @CurrentUser() user: JwtPayload,

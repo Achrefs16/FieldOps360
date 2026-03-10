@@ -203,11 +203,11 @@ resource "helm_release" "jaeger" {
         limits:
           memory: ${var.jaeger_memory_limit}
     agent:
-      enabled: true
+      enabled: false
     collector:
-      enabled: true
+      enabled: false
     query:
-      enabled: true
+      enabled: false
   YAML
   ]
 }
