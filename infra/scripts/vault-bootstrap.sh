@@ -47,14 +47,23 @@ ${KUBECTL_CMD} exec -n ${VAULT_NAMESPACE} ${VAULT_POD} -- sh -c "VAULT_TOKEN='${
 
 echo "[3/4] Injecting required application secrets into Vault..."
 
-# We generate strong random passwords for the services
-# Alternatively, you can replace these with env variables provided by your CI/CD pipeline
-DB_PASS=${TF_VAR_db_password:-"$(openssl rand -hex 16)"}
-REDIS_PASS=${TF_VAR_redis_password:-"$(openssl rand -hex 16)"}
-MINIO_AK=${TF_VAR_minio_access_key:-"fieldops_admin"}
-MINIO_SK=${TF_VAR_minio_secret_key:-"$(openssl rand -hex 16)"}
+# Read passwords from existing K8s secrets first (source of truth), fall back to env vars, then randoms.
+# Priority: existing K8s secret → TF_VAR env var → random (for new installs)
+_k8s_pg_pass=$(${KUBECTL_CMD} get secret -n fieldops-data postgresql -o jsonpath='{.data.postgres-password}' 2>/dev/null | base64 -d 2>/dev/null || true)
+_k8s_redis_pass=$(${KUBECTL_CMD} get secret -n fieldops-data redis -o jsonpath='{.data.redis-password}' 2>/dev/null | base64 -d 2>/dev/null || true)
+_k8s_minio_ak=$(${KUBECTL_CMD} get secret -n fieldops-data minio -o jsonpath='{.data.root-user}' 2>/dev/null | base64 -d 2>/dev/null || true)
+_k8s_minio_sk=$(${KUBECTL_CMD} get secret -n fieldops-data minio -o jsonpath='{.data.root-password}' 2>/dev/null | base64 -d 2>/dev/null || true)
+
+DB_PASS=${_k8s_pg_pass:-${TF_VAR_db_password:-"$(openssl rand -hex 16)"}}
+REDIS_PASS=${_k8s_redis_pass:-${TF_VAR_redis_password:-"$(openssl rand -hex 16)"}}
+MINIO_AK=${_k8s_minio_ak:-${TF_VAR_minio_access_key:-"fieldops_admin"}}
+MINIO_SK=${_k8s_minio_sk:-${TF_VAR_minio_secret_key:-"$(openssl rand -hex 16)"}}
 SMTP_USER=${SMTP_USER:-"no-reply@fieldops360.com"}
 SMTP_PASS=${SMTP_PASS:-"$(openssl rand -hex 16)"}
+
+echo "  DB_PASS source:   $([ -n "${_k8s_pg_pass}" ] && echo 'K8s secret (postgresql)' || echo 'env/random')"
+echo "  REDIS_PASS source: $([ -n "${_k8s_redis_pass}" ] && echo 'K8s secret (redis)' || echo 'env/random')"
+echo "  MINIO keys source: $([ -n "${_k8s_minio_ak}" ] && echo 'K8s secret (minio)' || echo 'env/random')"
 
 # 1. PostgreSQL Database Secret
 ${KUBECTL_CMD} exec -n ${VAULT_NAMESPACE} ${VAULT_POD} -- sh -c "VAULT_TOKEN='${VAULT_TOKEN}' vault kv put secret/postgresql password='${DB_PASS}'"
